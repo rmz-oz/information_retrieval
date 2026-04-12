@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch2: Term Vocabulary & Postings Lists</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:90px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+/* QUIZ */
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer}
+.reset-btn:hover{background:#0f2448}
+/* Classic */
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 14px;font-size:.82rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 2: The Term Vocabulary and Postings Lists</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ===================== LESSON ===================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 2.1 -->
+  <div class="card">
+    <h2>2.1 Belge Sınırlandırma ve Karakter Dizisi Çözümleme</h2>
+
+    <h3>2.1.1 Karakter Dizisi Elde Etme</h3>
+    <p>Herhangi bir metin işlemi başlamadan önce her belge ham byte temsilinden bir karakter dizisine dönüştürülmelidir. Düz ASCII İngilizce için bu önemsizdir; ancak pratikte belgeler onlarca kodlama şemasıyla (Unicode UTF-8, ISO-8859, satıcıya özgü) gelir.</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Karşılaşılan Zorluklar</h4>
+        <ul>
+          <li>Doğru kodlamayı belirlemek bir ML sınıflandırma problemidir</li>
+          <li>Binary formatlar (.doc, PDF, zip) önce metin içeriğini çıkarmalıdır</li>
+          <li>XML karakter entity'leri (&amp;amp; → &amp;) çözülmelidir</li>
+        </ul>
+      </div>
+      <div class="g-card">
+        <h4>Sağdan Sola Diller</h4>
+        Arapça ve İbranice sağdan sola yazar, ancak Unicode karakterleri mantıksal (fonolojik) sırada saklar; görsel sağdan sola oluşturmayı rendering sistemi üstlenir.
+      </div>
+    </div>
+
+    <h3>2.1.2 Belge Birimi Seçimi (İndeksleme Granülaritesi)</h3>
+    <p><strong>Belge birimi</strong>, IR sisteminin indeksleme için tek belge olarak ele aldığı şeydir. Bu seçim doğrudan bir precision/recall trade-off'u yaratır:</p>
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Çok Büyük (Kitap)</h4>
+        'Chinese toys' sorgusu; Çin'i 1. bölümde, oyuncakları 20. bölümde içeren kitabı getirir → <span class="badge badge-red">Düşük Precision</span>
+      </div>
+      <div class="g-card">
+        <h4>Çok Küçük (Cümle)</h4>
+        Farklı cümlelere yayılmış ilgili pasajlar kaçırılır → <span class="badge badge-red">Düşük Recall</span>
+      </div>
+      <div class="g-card">
+        <h4>Tipik Seçimler</h4>
+        Dosya, e-posta, bölüm, paragraf — koleksiyona ve kullanıcı görevine göre.
+      </div>
+    </div>
+  </div>
+
+  <!-- 2.2 Tokenization -->
+  <div class="card card-teal">
+    <h2>2.2 Terim Vocabulary'sini Belirleme</h2>
+
+    <h3>2.2.1 Tokenization</h3>
+    <div class="info-box">
+      <strong>Token / Type / Term Ayrımı</strong>
+      <strong>Token:</strong> Belirli bir belgede bir karakter dizisinin örneği &nbsp;|&nbsp;
+      <strong>Type:</strong> Aynı diziye sahip tüm token'ların sınıfı &nbsp;|&nbsp;
+      <strong>Term:</strong> Index'e yerleştirilen (normalize edilmiş) type
+    </div>
+
+    <p>Naif yaklaşım boşlukları böler ve noktalamayı atar; ancak pek çok zor durum ortaya çıkar:</p>
+
+    <table>
+      <tr><th>Problem</th><th>Örnek</th><th>Seçenekler / Trade-off</th></tr>
+      <tr><td><strong>Kesme işareti / İyelik</strong></td><td>O'Neill</td><td>neill, oneill, o'neill — sorgu tokenizasyonu belgeyle aynı olmalı</td></tr>
+      <tr><td><strong>Tire</strong></td><td>Hewlett-Packard, co-education</td><td>Tek token mu, iki token mu? Bağlama bağlı; heuristik veya sınıflandırıcı</td></tr>
+      <tr><td><strong>Bileşik / Çok kelimeli</strong></td><td>San Francisco, Los Angeles</td><td>Tek token olarak indekslenmeli; aksi halde parçalı eşleşme sorunu</td></tr>
+      <tr><td><strong>Özel token'lar</strong></td><td>C++, e-posta, URL, IP</td><td>Tekil token olarak tut → vocabulary büyür ama anlam korunur</td></tr>
+      <tr><td><strong>CJK dilleri</strong></td><td>Çince, Japonca, Korece</td><td>Boşluk yok; (1) kelime bölümleme (HMM/CRF) veya (2) k-gram indeksleme</td></tr>
+      <tr><td><strong>Almanca bileşikler</strong></td><td>Computerlinguistik</td><td>Compound-splitter ile bileşen kelimelere ayrıştır</td></tr>
+    </table>
+
+    <div class="warning-box">
+      <strong>Tutarlılık Zorunluluğu</strong>
+      Belge ve sorgu tokenizasyonu aynı tokenizer ile yapılmalıdır. Belge "oneill" olarak indekslenmişken sorgu "o'neill" üretirse eşleşme olmaz.
+    </div>
+
+    <h3>2.2.2 Stop Words (Durak Kelimeler)</h3>
+    <p>Çok yaygın kelimeler (the, a, in, of, to…) çok az ayırt edici güce sahiptir ve genellikle index'ten çıkarılır. Bu kelimeler <strong>stop word</strong>, çıkarım listesi ise <strong>stop list</strong> olarak adlandırılır.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Stop List Yapımı</h4>
+        Tüm terimleri koleksiyon frekansına (toplam tekrar) göre sırala; en yüksek N'i al, domain'e göre elle filtrele. Klasik stop listeler 200–300 terim; modern sistemler 7–12 veya hiç.
+      </div>
+      <div class="g-card">
+        <h4>Modern Trend</h4>
+        Web arama motorları genellikle stop list kullanmaz. Nedenler: (1) iyi sıkıştırma uzun postings'leri ucuzlatır; (2) TF-IDF yaygın kelimeleri doğal olarak aşağı çeker; (3) proximity/phrase sorguları stop word'lere ihtiyaç duyar.
+      </div>
+    </div>
+
+    <div class="danger-box">
+      <strong>Stop Word Problemleri</strong>
+      <ul>
+        <li><strong>Phrase sorguları bozulur:</strong> "flights to London" → "to" kaldırılırsa "flights London" kalır</li>
+        <li><strong>Şarkı/eser adları:</strong> "To Be or Not to Be", "Let It Be" → tamamen stop word'den oluşur</li>
+        <li><strong>Vannevar Bush:</strong> "As We May Think" → yalnızca "think" kalır</li>
+      </ul>
+    </div>
+
+    <h3>2.2.3 Normalizasyon (Denklik Sınıfları)</h3>
+    <p>Token normalizasyonu, yüzeysel olarak farklı karakter dizilerinin birbirleriyle eşleşmesi için token'ları kanonikalize eder.</p>
+
+    <table>
+      <tr><th>Yöntem</th><th>Örnek</th><th>Risk / Not</th></tr>
+      <tr><td><strong>Aksan/Diakritik kaldırma</strong></td><td>cliché → cliche, naïve → naive</td><td>İspanyolca'da peña ≠ pena (farklı anlam)</td></tr>
+      <tr><td><strong>Case-folding</strong></td><td>Automobile → automobile</td><td>Özel isimler anlam kaybeder: General Motors, The Fed, Bush</td></tr>
+      <tr><td><strong>Asimetrik genişleme</strong></td><td>windows → {Windows, windows, window}</td><td>Yön bağımlı: "Windows" → yalnızca OS; "windows" → tüm formlar</td></tr>
+      <tr><td><strong>Diğer İngilizce</strong></td><td>colour/color, ne'er/never</td><td>Britanya/Amerika yazımı, kısaltmalar</td></tr>
+      <tr><td><strong>Çok dilli</strong></td><td>Schütze → Schuetze</td><td>Almanca umlaut, Fransızca artikeller (le/la/l'/les)</td></tr>
+    </table>
+
+    <div class="info-box">
+      <strong>Truecasing</strong>
+      ML tabanlı yaklaşım: cümle başı büyük harfleri ve tamamen büyük başlıkları küçük harfe çevirirken cümle ortasındaki büyük harfleri korur (örn. "Bush" → değişmez, "The" cümle başında → "the").
+    </div>
+
+    <h3>2.2.4 Stemming ve Lemmatization</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Stemming</h4>
+        Heuristik; suffix'leri kırpar; yaklaşık kök (stem) bulur. Hızlı, vocabulary gerekmez. <br><br>
+        <strong>Over-stemming:</strong> operate/operational/operative → tümü "oper"<br>
+        <strong>Under-stemming:</strong> farklı formlar aynı stem'e düşmez
+      </div>
+      <div class="g-card">
+        <h4>Lemmatization</h4>
+        Tam morfolojik analiz; gerçek sözlük temel formu (lemma) döner.<br>
+        saw → see (fiil) veya saw (isim)<br><br>
+        Daha hassas ama daha yavaş. İngilizce IR'da stemming'i nadiren geçer.
+      </div>
+    </div>
+
+    <h3>Porter Stemmer (1980)</h3>
+    <p>En yaygın kullanılan İngilizce stemmer. 5 aşamalı suffix-stripping kuralı dizisinden oluşur. Her aşamada en uzun eşleşen suffix kuralı uygulanır.</p>
+
+    <div class="info-box">
+      <strong>Measure (m) nedir?</strong>
+      Stem içindeki Ünlü-Ünsüz (VC) dizisi sayısı. Kısa kelimelerin aşırı kırpılmasını önler.<br>
+      "replacement" → replac + ement: m=2 → kural uygulanır → "replac"<br>
+      "cement" → c + ement: m=0 → kural uygulanmaz → "cement" kalır
+    </div>
+
+    <table>
+      <tr><th>Faz 1 Kuralı</th><th>Örnek</th><th>Sonuç</th></tr>
+      <tr><td>SSES → SS</td><td>caresses</td><td>caress</td></tr>
+      <tr><td>IES → I</td><td>ponies</td><td>poni</td></tr>
+      <tr><td>SS → SS (kimlik/engelleme)</td><td>boss</td><td>boss</td></tr>
+      <tr><td>S → (kaldır)</td><td>cats, circus</td><td>cat, circu</td></tr>
+    </table>
+
+    <div class="warning-box">
+      <strong>Stemming'in IR Üzerindeki Etkisi</strong>
+      Recall artar, precision düşebilir. İngilizce net fayda: %0–5. Morfolojik açıdan zengin dillerde çok daha büyük: Fince +%30, İspanyolca +%10.
+    </div>
+
+    <table>
+      <tr><th>Stemmer</th><th>Agresiflik</th><th>Özellik</th></tr>
+      <tr><td>Lovins (1968)</td><td>En yüksek</td><td>Tek geçiş, çok agresif</td></tr>
+      <tr><td>Porter (1980)</td><td>Orta</td><td>5 aşama, en yaygın</td></tr>
+      <tr><td>Paice/Husk</td><td>Orta-yüksek</td><td>Porter ile Lovins arasında</td></tr>
+    </table>
+  </div>
+
+  <!-- 2.3 Skip Pointers -->
+  <div class="card card-purple">
+    <h2>2.3 Skip Pointer'lar ile Daha Hızlı Postings Kesişimi</h2>
+
+    <p>Ch.1'deki temel INTERSECT algoritması O(m+n) zamanda çalışır. <strong>Skip pointer'lar</strong>, postings listesinin büyük bölümlerini atlayarak pratikte sub-linear performans sağlar.</p>
+
+    <h3>Nasıl Çalışır?</h3>
+    <p>İndeksleme zamanında postings listelerine ek skip pointer'lar gömülür. <span class="inline-code">skip(p) = p'</span> şeklinde: <span class="inline-code">docID(skip(p1)) ≤ docID(p2)</span> ise p1'i doğrudan skip(p1)'e atla.</p>
+
+<pre><code>INTERSECTWITHSKIPS(p1, p2):
+  while p1 ≠ NIL and p2 ≠ NIL:
+    if docID(p1) == docID(p2):
+      output docID(p1); advance both
+    elif docID(p1) &lt; docID(p2):
+      if p1 has skip AND docID(skip(p1)) ≤ docID(p2):
+        advance p1 to skip(p1)    ← ATLA!
+      else:
+        advance p1 normally
+    else:
+      (simetrik, p2 için)
+  return answer</code></pre>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Yerleştirme Heuristiği</h4>
+        P uzunluklu liste için <strong>√P</strong> adet eşit aralıklı skip pointer koy. Pointer karşılaştırma sayısı ile atlama uzunluğunu dengeler.
+      </div>
+      <div class="g-card">
+        <h4>Trade-off</h4>
+        Daha fazla skip → kısa span → daha az fayda/atlama.<br>
+        Daha az skip → uzun span → az fırsat.
+      </div>
+      <div class="g-card">
+        <h4>Statik vs Dinamik</h4>
+        Statik index'lerde etkili. Sık güncellemelerde skip pointer'lar kayar → etkisizleşir.
+      </div>
+    </div>
+
+    <div class="danger-box">
+      <strong>Skip Pointer'lar OR Sorguları İçin İşe Yaramaz</strong>
+      OR sonucu her iki listeden tüm elemanları içermelidir. Hiçbir eleman atlanamaz çünkü her docID potansiyel çıktıdır. AND koşulu altında güvenli atlama mümkündür; OR'da mümkün değildir.
+    </div>
+  </div>
+
+  <!-- 2.4 Positional -->
+  <div class="card card-amber">
+    <h2>2.4 Pozisyonel Postings ve Phrase Sorguları</h2>
+
+    <p>Web sorgularının %10'u açık phrase sorgusu (örn. "stanford university"), daha fazlası ise örtük phrase aramasıdır. Standart inverted index (yalnızca docID) phrase sorgularını destekleyemez. İki çözüm:</p>
+
+    <h3>2.4.1 Biword Index</h3>
+    <p>Her ardışık kelime çifti tek bir vocabulary terimi olarak indekslenir.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Phrase Sorgu İşleme</h4>
+        2 kelimelik: direkt biword araması.<br>
+        k kelimelik (k&gt;2): (k-1) biword AND ile:<br>
+        "stanford university palo alto"<br>
+        → "stanford university" AND "university palo" AND "palo alto"
+      </div>
+      <div class="g-card">
+        <h4>Extended Biword (NX*N)</h4>
+        POS etiketleme; isim öbeklerini fonksiyon kelimeleriyle genişletilmiş biword olarak depola:<br>
+        "renegotiation of the constitution"<br>
+        → N X X N → tek biword
+      </div>
+    </div>
+
+    <div class="danger-box">
+      <strong>Biword Index Problemleri</strong>
+      <ul>
+        <li><strong>False positive:</strong> Biword'ler belgede ayrı ayrı geçebilir ama orijinal phrase mevcut olmayabilir</li>
+        <li><strong>Boyut:</strong> Vocabulary quadratik büyür</li>
+        <li><strong>Proximity desteklenmez:</strong> /k sorguları yapılamaz</li>
+        <li>Biword, standart yaklaşım DEĞİLDİR</li>
+      </ul>
+    </div>
+
+    <h3>2.4.2 Pozisyonel Index (Standart Çözüm)</h3>
+    <p>Her terim için postings yalnızca docID'yi değil, terimin belgede geçtiği her pozisyonu da saklar:</p>
+
+<pre><code>terim: df
+  docID1: &lt;pos1, pos2, pos3, ...&gt;
+  docID2: &lt;pos1, pos2, ...&gt;</code></pre>
+
+    <p><strong>POSITIONALINTERSECT:</strong> "A B" phrase sorgusu için A'nın i pozisyonunda, B'nin i+1 pozisyonunda göründüğü belgeleri bul. |pos(A) - pos(B)| = 1 (adjacent) veya ≤ k (/k proximity) koşulunu kontrol et.</p>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Boyut</h4>
+        Pozisyonel index standart index'in <strong>2–4x</strong> büyüklüğündedir. Sıkıştırılmış pozisyonel index ≈ ham metin boyutunun 1/3–1/2'si.
+      </div>
+      <div class="g-card">
+        <h4>Karmaşıklık</h4>
+        Boolean sorgu karmaşıklığı O(N)'den <strong>Θ(T)</strong>'ye geçer (T = toplam token sayısı). Phrase sorguları token pozisyonlarını incelemek zorunda.
+      </div>
+      <div class="g-card">
+        <h4>Proximity (/k)</h4>
+        Aynı POSITIONALINTERSECT algoritması; |pos(A)-pos(B)| ≤ k kontrol edilir. Biword bunu destekleyemez.
+      </div>
+    </div>
+
+    <h3>2.4.3 Kombinasyon Şeması</h3>
+    <p>Biword ve pozisyonel index birlikte kullanılabilir. Çok sık sorgulanan phrase'ler (ör. "Michael Jackson") phrase index entry olarak tutulur → pahalı pozisyonel kesişimden kaçınılır.</p>
+
+    <div class="success-box">
+      <strong>Phrase Index'e Dahil Etme Kriteri</strong>
+      Yüksek sorgu frekansı AND bireysel kelimeler yaygın ama phrase nadir olmalı.<br>
+      "The Who": yaygın kelimeler + nadir phrase → 1000x hızlanma<br>
+      "Britney Spears": ~3x — çünkü her iki adı da içeren belgeler zaten geçerli sonuç
+    </div>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card" style="background:#1a3a6e;color:#fff;border:none">
+    <h2 style="color:#fff;border-bottom-color:rgba(255,255,255,.2)">Hızlı Başvuru Kartı — Chapter 2</h2>
+    <table style="color:#e0e8f8">
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Token/Type/Term</strong></td><td>Token=örnek; Type=sınıf; Term=index'e giren normalize type</td></tr>
+      <tr><td><strong>Tokenization</strong></td><td>Kesme, tire, bileşik, CJK, Almanca; sorgu-belge tutarlılığı şart</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Stop Words</strong></td><td>Yüksek frekans, düşük anlam; koleksiyon frekansına göre sırala; modern trend: kullanma</td></tr>
+      <tr><td><strong>Normalizasyon</strong></td><td>Denklik sınıfları veya asimetrik genişleme; Windows ≠ windows</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Stemming</strong></td><td>Suffix kırp; recall ↑, precision ↓; İngilizce fayda %0–5</td></tr>
+      <tr><td><strong>Porter</strong></td><td>5 faz; en uzun kural; m>0/1/2 koşulları; hem index hem sorgu zamanı uygulanır</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Skip Pointer</strong></td><td>AND için faydalı; OR için değil; √P yerleştirme; statik index'te etkili</td></tr>
+      <tr><td><strong>Biword</strong></td><td>Hızlı 2-kelime phrase; false positive riski; proximity yok; standart değil</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Positional Index</strong></td><td>Phrase + /k proximity destekler; 2–4x büyük; Θ(T) karmaşıklık</td></tr>
+      <tr><td><strong>Kombinasyon</strong></td><td>Popüler phrase'ler için phrase index + geri kalanı için positional</td></tr>
+    </table>
+  </div>
+
+</div>
+</div><!-- /lesson -->
+
+<!-- ===================== QUIZ ===================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Skor</span>
+    <div class="score-track"><div class="score-fill" id="scoreBar" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Başla</button>
+</div>
+</div>
+
+<!-- ===================== CLASSIC ===================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="info-box" style="margin-bottom:24px">
+    <strong>Nasıl Çalışır?</strong>
+    Başlığa tıkla → soruyu oku ve kendi cevabını düşün → tekrar tıkla → model cevabı aç.
+  </div>
+
+  <!-- K1 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — Tokenization: Trace + 4 Karar</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Aşağıdaki metin için:<br>
+      <em>"Dr. O'Neill co-authored a paper with Hewlett-Packard on C++ at M.I.T."</em></p>
+      <p>(a) Naif boşluk bölümlemesiyle oluşan token'ları listeleyin.<br>
+      (b) En az 4 tokenization kararı ve her birinin trade-off'unu açıklayın.<br>
+      (c) Belge ve sorgu tokenizasyonu tutarlılığı neden zorunludur?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) Boşlukla bölünmüş token'lar:</strong></p>
+      <pre><code>Dr.  O'Neill  co-authored  a  paper  with  Hewlett-Packard  on  C++  at  M.I.T.</code></pre>
+      <p><strong>(b) 4 Tokenization Kararı:</strong></p>
+      <ol>
+        <li><strong>Dr., M.I.T. — noktalama:</strong> Noktaları kaldır → "dr", "mit". Trade-off: "mit" ayırt edicilik kaybeder; "M.I.T." vs "MIT" eşleşmeyebilir.</li>
+        <li><strong>O'Neill — kesme işareti:</strong> Seçenekler: neill, oneill, o'neill, o neill. Trade-off: Hangi seçim yapılırsa sorgu tokenizasyonu da aynı seçimi yapmalı.</li>
+        <li><strong>co-authored, Hewlett-Packard — tire:</strong> co-authored → coeducation (tek) veya co/authored (iki). Trade-off: bazı tireler ayırır (Hewlett-Packard = iki entity), bazıları birleştirir (co-education).</li>
+        <li><strong>C++ — özel token:</strong> Alfasayısal olmayana bölünürse 'c', '', '' → anlam kaybolur. Tek token olarak saklanmalı. Trade-off: vocabulary büyür, tokenizer karmaşıklaşır.</li>
+      </ol>
+      <p><strong>(c) Tutarlılık:</strong> Belgeler "oneill" olarak indekslenmişken sorgu "o'neill" üretirse eşleşme olmaz. Belge ve sorguda aynı tokenizer kullanılırsa herhangi bir karakter dizisi her zaman aynı şekilde üretilir.</p>
+    </div>
+  </div>
+
+  <!-- K2 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — Stop Words: Avantajlar, Dezavantajlar ve Modern Trend</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> (a) 200 terimlik stop list kullanmanın 2 avantajı nedir?<br>
+      (b) 2 dezavantajı?<br>
+      (c) Stop word kaldırıldığında başarısız olacak 2 sorgu örneği verin.<br>
+      (d) Modern web arama motorları neden çoğunlukla stop list kullanmaz?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) Avantajlar:</strong></p>
+      <ol>
+        <li>Index boyutunu önemli ölçüde azaltır — "the", "of", "in" için postings listeleri çok büyük olabilir.</li>
+        <li>Sorgu işlemeyi hızlandırır — daha az postings yüklenir, kesiştirilir veya sıralanır.</li>
+      </ol>
+      <p><strong>(b) Dezavantajlar:</strong></p>
+      <ol>
+        <li>Phrase sorguları bozulur: "flights to London" → "to" kaldırılırsa "flights London" kalır.</li>
+        <li>Tamamen stop word'den oluşan eserler aranamaz: "To Be or Not to Be", "Let It Be".</li>
+      </ol>
+      <p><strong>(c) Başarısız sorgular:</strong></p>
+      <ol>
+        <li>"President of the United States" → "of", "the" kaldırılır; "president united states" kalır → phrase anlamı bozulur.</li>
+        <li>Vannevar Bush'un "As We May Think" makalesi → "as", "we", "may" durdurulur; yalnızca "think" kalır → milyonlarca alakasız sonuç.</li>
+      </ol>
+      <p><strong>(d) Modern web motorları stop list kullanmaz çünkü:</strong></p>
+      <ul>
+        <li>İyi sıkıştırma uzun postings'leri ucuz hale getirir</li>
+        <li>TF-IDF/BM25 yaygın terimleri sıralamada doğal olarak aşağı çeker</li>
+        <li>Impact-sorted index'ler erken sonlandırmayı mümkün kılar</li>
+        <li>Phrase/proximity sorgular stop word'lerin index'te olmasını gerektirir</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- K3 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — Porter Stemmer: Faz 1 Trace + Measure m</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Porter Faz 1 kuralları: SSES→SS, IES→I, SS→SS, S→<br>
+      (a) Şu kelimelere uygulayın: caresses, ponies, caress, cats, boss, circus, canaries<br>
+      (b) (m&gt;1) EMENT→ kuralı "replacement"'ı "replac"'a, "cement"'i ise "c"'ye dönüştürMEZ. Measure m'yi açıklayın.<br>
+      (c) Stemming her zaman IR performansını artırır mı?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) Uygulama:</strong></p>
+      <pre><code>caresses → SSES kuralı → caress
+ponies   → IES kuralı  → poni
+caress   → SS kuralı (kimlik) → caress (değişmez)
+cats     → S kuralı   → cat
+boss     → SS kuralı  → boss (değişmez)
+circus   → S kuralı   → circu
+canaries → IES kuralı → canari</code></pre>
+      <p><strong>(b) Measure m:</strong> Stem içindeki VC (Ünlü-Ünsüz) dizi sayısı; kısa kelimelerin aşırı kırpılmasını önler.</p>
+      <pre><code>"replacement" = replac + ement
+  stem "replac": re(VC) + la(VC) → m=2 → m>1 sağlanır → EMENT kaldırılır → replac
+
+"cement" = c + ement
+  stem "c": yalnızca ünsüz → m=0 → m>1 sağlanmaz → kural uygulanmaz → cement kalır</code></pre>
+      <p><strong>(c)</strong> Stemming her zaman performansı artırmaz. Recall artar ama precision düşebilir. Porter, {operate, operating, operational, operative}'i tümünü "oper"'a eşler → "operating system" sorgusu "operational research" belgelerini de getirir. İngilizce net fayda %0–5; morfolojik açıdan zengin dillerde çok daha büyük (Fince +%30).</p>
+    </div>
+  </div>
+
+  <!-- K4 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — Skip Pointer Trace + √P Heuristiği</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong><br>
+      Brutus = [2,4,8,16,19,23,28,43] (skip pointer'lar 16 ve 28'e işaret ediyor)<br>
+      Caesar = [1,2,3,5,8,41,51,60,71] (skip pointer'lar 5 ve 51'e işaret ediyor)<br>
+      (a) INTERSECTWITHSKIPS'i adım adım izleyin; skip kullanıldığında belirtin.<br>
+      (b) √P heuristiği nedir ve trade-off nedir?<br>
+      (c) Skip pointer'lar OR sorguları için neden işe yaramaz?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) Trace:</strong></p>
+      <pre><code>B=2,  C=1  → C&lt;B → C ilerle → C=2
+B=2,  C=2  → EŞLEŞTİ! 2 ekle; her ikisi de ilerle → B=4, C=3
+B=4,  C=3  → C&lt;B → C ilerle → C=5
+B=4,  C=5  → B&lt;C → skip(B)=16 > 5 → normal ilerle → B=8
+B=8,  C=5  → C&lt;B → C ilerle → C=8
+B=8,  C=8  → EŞLEŞTİ! 8 ekle; her ikisi de ilerle → B=16, C=41
+B=16, C=41 → B&lt;C → skip(B)=28 ≤ 41 → SKIP! B=28
+B=28, C=41 → B&lt;C → skip yok → B ilerle → B=43
+B=43, C=41 → C&lt;B → C ilerle → C=51,60,71,NIL → B tükendi
+Sonuç: [2, 8]  (1 skip kullanıldı: 16→28)</code></pre>
+      <p><strong>(b) √P heuristiği:</strong> P uzunluklu liste için √P adet eşit aralıklı skip koy; skip span = √P. Pointer karşılaştırma maliyeti ≈ √P; ortalama kazanç/skip ≈ √P → ikisi de O(√P)'de dengelenir. Trade-off: daha fazla skip → kısa span → daha az fayda/atlama; daha az skip → az fırsat.</p>
+      <p><strong>(c) OR sorguları:</strong> OR sonucu her iki listeden tüm elemanları içermelidir. Hiçbir eleman atlanamaz çünkü her docID potansiyel çıktıdır. AND'de atlanan elemanların sonuçta yer almayacağı garantidir; OR'da böyle bir garanti yoktur.</p>
+    </div>
+  </div>
+
+  <!-- K5 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — Pozisyonel Index: Phrase Trace + Biword False Positive</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru A — Phrase Sorgu Trace:</strong><br>
+      Pozisyonel index'ten "fools rush in" sorgusunu cevaplayan belgeleri bulun:</p>
+      <pre><code>fools: doc2:&lt;1,17,74,222,255&gt;  doc4:&lt;8,78,108,458&gt;  doc7:&lt;3,13,23,193&gt;
+rush:  doc2:&lt;2,66,194,321,702&gt; doc4:&lt;9,69,149,429,569&gt; doc7:&lt;4,14,404&gt;
+in:    doc2:&lt;3,37,76,444,851&gt;  doc4:&lt;10,20,110,470,500&gt; doc7:&lt;5,15,25,195&gt;</code></pre>
+      <p><strong>Soru B — Biword False Positive:</strong> "New York University" sorgusu için biword index'in false positive döndüreceği bir belge örneği verin.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Soru A Cevabı:</strong></p>
+      <pre><code>Doc 2: fools@1 → rush@2? ✓(1+1=2) → in@3? ✓(2+1=3) → EŞLEŞME (1,2,3)
+Doc 4: fools@8 → rush@9? ✓ → in@10? ✓ → EŞLEŞME (8,9,10)
+Doc 7: fools@3 → rush@4? ✓ → in@5? ✓ → EŞLEŞME (3,4,5)</code></pre>
+      <div class="success-box">Sonuç: Doc 2, 4 ve 7'nin tamamı "fools rush in" ile eşleşir.</div>
+      <p><strong>Soru B Cevabı — False Positive Belgesi:</strong></p>
+      <pre><code>"The New York Stock Exchange is near York University's Manhattan campus."</code></pre>
+      <p>Bu belge biword "new york" (New York Stock Exchange'den) ve biword "york university" (York University'den) içeriyor. Her iki biword da mevcut → biword index bu belgeyi döndürür.</p>
+      <div class="danger-box"><strong>Ancak</strong> belgede "New York University" ardışık 3-kelime dizisi hiç geçmiyor. Bu bir false positive'dir. Pozisyonel index bu belgeyi doğru olarak reddeder — biword'lerin doğru pozisyonda örtüştüğünü doğrulayamaz.</div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /classic -->
+
+<script>
+function switchTab(id, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleClassic(header){
+  const body=header.nextElementSibling;
+  const ch=header.querySelector('.classic-chevron');
+  const open=body.classList.contains('open');
+  body.classList.toggle('open',!open);
+  ch.style.transform=open?'':'rotate(180deg)';
+}
+
+const questions=[
+  {
+    q:"Token, Type ve Term arasındaki fark nedir?",
+    opts:["Token=sınıf; Type=örnek; Term=normalize type","Token=örnek; Type=sınıf; Term=index'e giren normalize type","Token=index birimi; Type=ham kelime; Term=stem","Üçü de aynı anlama gelir"],
+    ans:1,
+    exp:"Token: belirli bir belgede bir karakter dizisinin örneği. Type: aynı diziye sahip tüm token'ların sınıfı. Term: normalize edilmiş ve index'e giren type."
+  },
+  {
+    q:"CJK (Çince/Japonca/Korece) dillerinde tokenization için hangi yaklaşım kullanılır?",
+    opts:["Yalnızca noktalama işaretlerine göre bölme","Boşluk tabanlı bölme (whitespace splitting)","Kelime bölümleme (HMM/CRF) veya karakter k-gram indeksleme","Stop word kaldırma","Yalnızca noktalama işaretlerine göre bölme"],
+    ans:2,
+    exp:"CJK dillerinde kelimeler arasında boşluk yoktur. İki yaklaşım: (1) HMM/CRF kullanan kelime bölümleme, (2) belirsiz bölümlemeyi atlayan karakter k-gram indeksleme (n=2 veya 3). K-gram yaklaşımı Çince için zaman zaman kelime tabanlıyı geçer."
+  },
+  {
+    q:"Stop list oluşturmak için hangi yöntem kullanılır?",
+    opts:["Tüm terimleri df (belge frekansı) azalan sırada sırala","Tüm terimleri koleksiyon frekansına (toplam tekrar) göre sırala; en yüksek N'i al","Tüm terimleri alfabetik sırala ve ilk %10'u çıkar","Kullanıcı geri bildirimlerine göre elle seç"],
+    ans:1,
+    exp:"Stop list: tüm terimler toplam koleksiyon frekansına (corpus'taki toplam tekrar sayısı) göre azalan sırada sıralanır; en yüksek N terim alınır, ardından domain'e göre anlamsal içerik açısından elle filtrelenir."
+  },
+  {
+    q:"Aşağıdakilerden hangisi modern web arama motorlarının stop list KULLANMAMASININ en iyi açıklamasıdır?",
+    opts:["Stop word'ler sorgu işlemini hızlandırır","İyi sıkıştırma, TF-IDF weighting ve phrase sorgu ihtiyaçları stop list'i gereksiz kılar","Stop word'ler index boyutunu küçültür","Stop list oluşturmak çok pahalıdır"],
+    ans:1,
+    exp:"Modern motorlar: (1) iyi sıkıştırma uzun postings'leri ucuz hale getirir; (2) TF-IDF/BM25 yaygın terimleri sıralamada doğal olarak aşağı çeker; (3) impact-sorted index'ler erken sonlandırmayı mümkün kılar; (4) phrase/proximity sorguları stop word'lerin index'te olmasını gerektirir."
+  },
+  {
+    q:"Case-folding'in (tümünü küçük harfe çevirme) ana riski nedir?",
+    opts:["Index boyutunu artırır","Stemming algoritmasını bozar","Özel isimler anlam kaybeder (General Motors, Bush)","Tokenization tutarsız hale gelir"],
+    ans:2,
+    exp:"'Automobile → automobile' veya 'ferrari → Ferrari' için faydalıdır. Ancak 'General Motors', 'The Fed', 'Bush' gibi özel isimler küçük harfe çevrilirse ayırt edicilik kaybeder. 'Bush' hem bir siyasetçiyi hem de bir çalılığı işaret edebilir."
+  },
+  {
+    q:"Asimetrik genişleme (asymmetric expansion) hangi durumda tercih edilir?",
+    opts:["Tüm sorgular için eşit genişletme gerektiğinde","Genişlemenin yönü kullanıcının yazdığı forma göre farklılaşması gerektiğinde","Vocabulary boyutunu küçültmek istediğinde","Denklik sınıfları çok fazla terim içerdiğinde"],
+    ans:1,
+    exp:"Asimetrik genişleme: 'Windows' (büyük W) → yalnızca {Windows} (kullanıcı işletim sistemini kastediyor); 'windows' (küçük w) → {Windows, windows, window}. Bu asimetri denklik sınıflarıyla sağlanamaz."
+  },
+  {
+    q:"Porter stemmer'ın 'SS→SS' gibi bir kimlik kuralı içermesinin amacı nedir?",
+    opts:["SS ile biten kelimelerin sayısını artırmak için","'S→' genel kuralının SS ile biten kelimelere (örn. boss) yanlış uygulanmasını engellemek için","SS köklerini birleştirmek için","Ünlü-ünsüz ölçüsünü hesaplamak için"],
+    ans:1,
+    exp:"SS→SS bir engelleme kuralıdır. Bu kural olmadan 'boss' → 'bos' olurdu (S→ kuralı son S'yi kaldırırdı). Kimlik kuralı daha uzun eşleşmeyi öncelikli uygulayarak 'boss' → 'boss' korunmasını sağlar."
+  },
+  {
+    q:"Porter stemmer'da 'measure (m)' ne işe yarar?",
+    opts:["Stemmer'ın hızını ölçer","Postings listesinin uzunluğunu belirler","Kısa kelimelerin aşırı kırpılmasını önlemek için VC dizi sayısını temsil eder","Stop word listesinin boyutunu kontrol eder"],
+    ans:2,
+    exp:"Measure m, stem içindeki Ünlü-Ünsüz (VC) dizi sayısını yaklaşık olarak sayar. 'cement' = c + ement; stem 'c' için m=0 → (m>1) EMENT kuralı uygulanmaz. 'replacement' = replac + ement; m=2 → kural uygulanır → 'replac'."
+  },
+  {
+    q:"Skip pointer yerleştirmek için önerilen heuristik nedir?",
+    opts:["Her 10 elemanda bir skip koy","P uzunluklu liste için P/2 adet skip koy","P uzunluklu liste için √P adet eşit aralıklı skip koy","Yalnızca postings listesinin başına ve sonuna skip koy"],
+    ans:2,
+    exp:"√P yerleştirmesi: skip span ≈ √P. Pointer karşılaştırma maliyeti ile atlama başına kazanç her ikisi de O(√P) düzeyinde → dengelenmiş trade-off. Daha fazla skip = daha kısa span; daha az skip = daha az fırsat."
+  },
+  {
+    q:"Pozisyonel index, standart (non-positional) index'e kıyasla ne kadar büyüktür?",
+    opts:["Yaklaşık aynı boyut","Yaklaşık %10 daha büyük","Yaklaşık 2–4 kat daha büyük","10 kat veya daha fazla büyük"],
+    ans:2,
+    exp:"Pozisyonel posting, belge başına değil token tekrarı başına bir giriş içerir. 100.000 kelimelik belgede 100 kez geçen bir terim 100 pozisyonel giriş üretir ama yalnızca 1 standart giriş. Kural: pozisyonel index ≈ standart index'in 2–4 katı."
+  },
+  {
+    q:"Biword index'te false positive neden oluşur?",
+    opts:["Biword'ler çok seyrek olduğu için","Biword index yalnızca AND sorgularını desteklediği için","Biword'ler belgede orijinal ardışık phrase olmadan ayrı ayrı geçebildiği için","Biword sıkıştırması hatalı sonuç ürettiği için"],
+    ans:2,
+    exp:"'stanford university palo alto' sorgusu → biword'ler: 'stanford university' AND 'university palo' AND 'palo alto'. Her biword belgede farklı bağlamlarda geçebilir (örn. 'New York Stock Exchange' + 'York University') → orijinal 3-kelime phrase olmadan eşleşme → false positive."
+  },
+  {
+    q:"Proximity sorgusu 'employment /3 place' hangi index türüyle desteklenir?",
+    opts:["Yalnızca biword index","Yalnızca standart inverted index","Yalnızca pozisyonel index","Her iki index türü de eşit şekilde destekler"],
+    ans:2,
+    exp:"Proximity /k sorgusu |pos(A) - pos(B)| ≤ k kontrolü gerektirir. Bu yalnızca pozisyonel index'te mümkündür. Biword index yalnızca tam ardışık çiftleri destekler; standart index pozisyon bilgisi içermez."
+  },
+  {
+    q:"Stemming'in Boolean IR'daki recall üzerindeki etkisi nedir?",
+    opts:["Recall kesinlikle düşer","Recall kesinlikle değişmez","Recall hiçbir zaman düşmez (artabilir veya sabit kalabilir)","Recall ve precision her ikisi de eşit ölçüde değişir"],
+    ans:2,
+    exp:"Stemming daha fazla yüzey formunu aynı terime eşler. Daha önce alınan her belge hâlâ alınır (stem orijinal formu kapsar) + varyant formlar içeren ek belgeler de alınır. Bu nedenle alınan belge kümesi yalnızca büyüyebilir veya sabit kalabilir → recall düşemez."
+  },
+  {
+    q:"POSITIONALINTERSECT algoritmasının zaman karmaşıklığı nedir?",
+    opts:["O(N) — N = belge sayısı","O(N²)","Θ(T) — T = koleksiyondaki toplam token sayısı","O(P × L_max) — P = postings entry sayısı, L_max = maks belge uzunluğu"],
+    ans:2,
+    exp:"Phrase sorguları token pozisyonlarını incelemek zorundadır. Boolean sorgu karmaşıklığı O(N)'den Θ(T)'ye geçer (T = toplam token sayısı). Bu kaçınılmazdır; T >> N olduğundan önemli bir overhead'dir."
+  },
+  {
+    q:"Kombinasyon şemasında bir phrase'in phrase index'e dahil edilmesi için hangi kriter gereklidir?",
+    opts:["Phrase nadir olmalı ve bireysel kelimeler de nadir olmalı","Phrase ve bireysel kelimelerin ikisi de çok yaygın olmalı","Yüksek sorgu frekansı VE bireysel kelimeler yaygın ama phrase nadir olmalı","Yalnızca 2 kelimeli phrase'ler dahil edilmeli"],
+    ans:2,
+    exp:"'The Who': her iki kelime de yaygın + phrase nadir → 1000x hızlanma. 'Britney Spears': ~3x çünkü her iki adı da içeren belgelerin büyük çoğunluğu zaten geçerli sonuç. Kriter: yüksek sorgu frekansı VE bireysel kelimeler yaygın ama phrase nadir."
+  }
+];
+
+let score=0,answered=0;
+function buildQuiz(){
+  const c=document.getElementById('quizContainer');
+  c.innerHTML=''; score=0; answered=0; updateScore();
+  questions.forEach((q,qi)=>{
+    const opts=q.opts.map((o,oi)=>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;min-width:18px">${['A','B','C','D'][oi]})</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    c.innerHTML+=`<div class="q-card" id="qcard_${qi}">
+      <div class="q-num">Soru ${qi+1} / 15</div>
+      <div class="q-text">${q.q}</div>
+      <div class="options">${opts}</div>
+      <div class="explanation" id="exp_${qi}"><strong>Açıklama:</strong> ${q.exp}</div>
+    </div>`;
+  });
+}
+function answer(qi,oi){
+  const q=questions[qi];
+  document.querySelectorAll(`[id^="opt_${qi}_"]`).forEach(o=>o.disabled=true);
+  document.getElementById(`opt_${qi}_${oi}`).classList.add(oi===q.ans?'correct':'wrong');
+  if(oi!==q.ans) document.getElementById(`opt_${qi}_${q.ans}`).classList.add('correct');
+  if(oi===q.ans) score++;
+  answered++;
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  updateScore();
+}
+function updateScore(){
+  const pct=questions.length?(score/questions.length)*100:0;
+  document.getElementById('scoreBar').style.width=pct+'%';
+  document.getElementById('scoreVal').textContent=`${score} / ${questions.length}`;
+}
+function resetQuiz(){buildQuiz();}
+buildQuiz();
+</script>
+</body>
+</html>
