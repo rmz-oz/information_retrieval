@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch1: Boolean Retrieval</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none;padding:0}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+
+/* Cards */
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+
+/* Info boxes */
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+
+/* Grid */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+
+/* Code */
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+
+/* Table */
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+
+/* Flow */
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:100px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+
+/* Badge */
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+
+/* Lists */
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+
+/* QUIZ */
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+.reset-btn:hover{background:#0f2448}
+
+/* Classic questions */
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 16px;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 1: Boolean Retrieval</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ==================== LESSON ==================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 1.1 -->
+  <div class="card">
+    <h2>1.1 Information Retrieval Problemi</h2>
+    <p><strong>Information Retrieval (IR)</strong>; büyük koleksiyonlar içinde bir <em>bilgi ihtiyacını</em> karşılayan yapılandırılmamış materyali (genellikle metin) bulma görevidir. Basit bir <span class="inline-code">grep</span> aramasından farklı olarak IR sistemleri milyonlarca belgeyi ölçeklenebilir biçimde ele almalı ve incelikli alaka düzeyini yönetmelidir.</p>
+
+    <div class="info-box">
+      <strong>Klasik Motivasyon Örneği</strong>
+      Shakespeare'in 37 oyununda <em>Brutus</em> ve <em>Caesar</em> geçen ama <em>Antony</em> geçmeyen tüm oyunları bul.
+    </div>
+
+    <h3>Term-Document Incidence Matrix (Terim-Belge Matrisi)</h3>
+    <p>En naif yaklaşım: satırlar terimler, sütunlar belgeler olan ikili bir matris. <span class="inline-code">(t, d) = 1</span> ise term t, belge d'de geçiyor demektir.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>AND Sorgusu</h4>
+        Brutus ve Caesar satırlarını bit bazında AND'le. Sonuç 1 olan sütunlar eşleşen belgelerdir.
+      </div>
+      <div class="g-card">
+        <h4>NOT Sorgusu</h4>
+        Antony satırının bitsel tümleyeni alınır, ardından AND uygulanır.
+      </div>
+    </div>
+
+    <div class="danger-box">
+      <strong>Temel Problem</strong>
+      Gerçek dünya koleksiyonlarında (milyonlarca terim × milyonlarca belge) matris <em>devasa</em> ve <em>son derece seyrek</em> (sparse) olur. Depolamak pratik değildir.
+    </div>
+  </div>
+
+  <!-- 1.2 -->
+  <div class="card card-teal">
+    <h2>1.2 Inverted Index (Ters Dizin)</h2>
+    <p>Çözüm: her terim için yalnızca o terimin geçtiği belge listesini saklamak → <strong>postings list</strong>. Neredeyse her arama motorunun temel veri yapısıdır.</p>
+
+    <h3>Inverted Index İnşa Etmenin 4 Adımı</h3>
+    <div class="flow">
+      <div class="flow-box">1. Belge Topla</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">2. Tokenize Et</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">3. Dilbilimsel Ön İşleme</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">4. Emit / Sort / Merge</div>
+    </div>
+
+    <table>
+      <tr><th>Adım</th><th>Açıklama</th><th>Örnekler / Kararlar</th></tr>
+      <tr><td><strong>1. Topla</strong></td><td>Corpus'u bir araya getir</td><td>Web crawl, dosya sistemi, veritabanı</td></tr>
+      <tr><td><strong>2. Tokenize</strong></td><td>Metni token akışına böl</td><td>Noktalama, sayılar, tire, büyük-küçük harf</td></tr>
+      <tr><td><strong>3. Ön İşleme</strong></td><td>Token'ları normalize et</td><td>Lowercasing, stemming, lemmatization, stop-word removal</td></tr>
+      <tr><td><strong>4. Index</strong></td><td>(terim, docID) çiftlerini emit et, sırala, birleştir</td><td>Her terim için tek postings list oluşur</td></tr>
+    </table>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="g-card">
+        <h4>Dictionary (Sözlük)</h4>
+        Tüm unique terimlerin sözlüğü. Her giriş <strong>df</strong> (document frequency) ve postings'e işaretçi içerir. Genellikle <em>bellekte</em> tutulur.
+      </div>
+      <div class="g-card">
+        <h4>Postings (Kayıtlar)</h4>
+        Her terim için docID listesi. Artan docID sırasıyla sıralıdır. Genellikle <em>diskte</em> saklanır.
+      </div>
+    </div>
+
+    <div class="success-box">
+      <strong>Document Frequency (df)</strong>
+      Bir terimin kaç belgede geçtiği. Dictionary'de saklanır. Postings list uzunluğuna hızlı erişim sağlar ve query optimization için kullanılır.
+    </div>
+
+    <h3>Örnek Inverted Index</h3>
+    <pre><code>Terim         df    Postings (docID'ler)
+──────────────────────────────────────
+Brutus         3    → [1, 2, 4]
+Caesar         5    → [1, 2, 3, 4, 5]
+Calpurnia      1    → [2]
+Antony         4    → [1, 2, 3, 5]</code></pre>
+  </div>
+
+  <!-- 1.3 -->
+  <div class="card card-purple">
+    <h2>1.3 Boolean Sorgu İşleme</h2>
+
+    <h3>INTERSECT Algoritması (AND için)</h3>
+    <p><span class="inline-code">Brutus AND Caesar</span> sorgusunu cevaplamak için iki postings list iki-göstericili (two-pointer) algoritmayla birleştirilir:</p>
+
+<pre><code>INTERSECT(p1, p2):
+    answer = []
+    while p1 != NIL and p2 != NIL:
+        if docID(p1) == docID(p2):
+            answer.append(docID(p1))
+            advance p1; advance p2
+        elif docID(p1) &lt; docID(p2):
+            advance p1
+        else:
+            advance p2
+    return answer</code></pre>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Zaman Karmaşıklığı</h4>
+        O(x + y) — her gösterici en fazla bir kez ilerler.
+      </div>
+      <div class="g-card">
+        <h4>Ön Koşul</h4>
+        Her iki liste de docID'ye göre <em>sıralı</em> olmalıdır.
+      </div>
+      <div class="g-card">
+        <h4>AND NOT</h4>
+        p1'de olup p2'de olmayan docID'leri ekle. Yine O(x+y).
+      </div>
+    </div>
+
+    <h3>UNION Algoritması (OR için)</h3>
+<pre><code>UNION(p1, p2):
+    answer = []
+    while p1 != NIL and p2 != NIL:
+        if docID(p1) == docID(p2):
+            answer.append(docID(p1)); advance p1; advance p2
+        elif docID(p1) &lt; docID(p2):
+            answer.append(docID(p1)); advance p1
+        else:
+            answer.append(docID(p2)); advance p2
+    # Kalan elemanları ekle
+    while p1 != NIL: answer.append(docID(p1)); advance p1
+    while p2 != NIL: answer.append(docID(p2)); advance p2
+    return answer</code></pre>
+
+    <div class="info-box">
+      <strong>INTERSECT vs UNION Farkı</strong>
+      INTERSECT: bir liste biter → dur. UNION: bir liste biter → diğerinin kalan tüm elemanlarını ekle.
+    </div>
+
+    <h3>Query Optimizasyonu</h3>
+    <p>Birden fazla terimli AND sorgusunda kesişimlerin sırası ara sonuç büyüklüklerini etkiler. Optimal strateji:</p>
+    <div class="success-box">
+      <strong>Artan df sırasına göre sırala ve en küçük listeden başla.</strong>
+      Bu, her adımdaki ara sonucun boyutunu minimuma indirir.
+    </div>
+
+    <h3>Örnek Trace: INTERSECT(C=[3,7,9,15,20], B=[2,3,6,9,11,14])</h3>
+    <pre><code>p1=3,  p2=2  → 2&lt;3,  p2 ilerle
+p1=3,  p2=3  → EŞLEŞTİ! 3 ekle, ikisi de ilerle
+p1=7,  p2=6  → 6&lt;7,  p2 ilerle
+p1=7,  p2=9  → 7&lt;9,  p1 ilerle
+p1=9,  p2=9  → EŞLEŞTİ! 9 ekle, ikisi de ilerle
+p1=15, p2=11 → 11&lt;15, p2 ilerle
+p1=15, p2=14 → 14&lt;15, p2 ilerle
+p1=15, p2=NIL → DUR
+Sonuç: [3, 9]</code></pre>
+
+    <h3>NOT Sorgularında Dikkat</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>x AND NOT y → O(x+y) ✓</h4>
+        Tümleyen materyalize edilmez; set-difference olarak birleştirme sırasında işlenir.
+      </div>
+      <div class="g-card">
+        <h4>x OR NOT y → O(N) ✗</h4>
+        NOT y'nin tümleyeni devasa olabilir (N - |y| belge). O(x+y)'de yapılamaz.
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.4 -->
+  <div class="card card-amber">
+    <h2>1.4 Boolean Retrieval Modeli</h2>
+    <p>Klasik Boolean modeli yalnızca AND, OR, NOT operatörlerini kullanır. Hukuki ve profesyonel arama (Westlaw gibi) sistemlerinde hâlâ yaygındır.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Özellikler</h4>
+        <ul>
+          <li><strong>Exact-match</strong>: Belge ya eşleşir ya eşleşmez</li>
+          <li><strong>Sıralama yok</strong>: Tüm eşleşen belgeler eşit statüde döner</li>
+          <li>Kullanıcı tam sözdizimini ve vocabulary'yi bilmek zorunda</li>
+        </ul>
+      </div>
+      <div class="g-card">
+        <h4>"Feast or Famine" Problemi</h4>
+        <ul>
+          <li><strong>Çok fazla sonuç</strong>: geniş terimler</li>
+          <li><strong>Çok az sonuç</strong>: dar veya yanlış terimler</li>
+          <li>Ara sonuç kontrolü yoktur</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Extended Boolean — Westlaw Proximity Operatörleri</h3>
+    <table>
+      <tr><th>Operatör</th><th>Anlamı</th><th>Örnek</th></tr>
+      <tr><td><span class="inline-code">/k</span></td><td>k kelime içinde</td><td><span class="inline-code">damages /5 negligence</span></td></tr>
+      <tr><td><span class="inline-code">/s</span></td><td>Aynı cümle içinde</td><td><span class="inline-code">professor /s explain</span></td></tr>
+      <tr><td><span class="inline-code">/p</span></td><td>Aynı paragraf içinde</td><td><span class="inline-code">contract /p breach</span></td></tr>
+      <tr><td><span class="inline-code">" "</span></td><td>Tam ifade arama</td><td><span class="inline-code">"information retrieval"</span></td></tr>
+    </table>
+
+    <div class="warning-box">
+      <strong>Proximity vs AND</strong>
+      AND yalnızca her iki terimin belgede <em>herhangi bir yerde</em> geçmesini zorunlu kılar. /s operatörü aynı cümle içinde geçmelerini garantiler → semantik yakınlık.
+    </div>
+  </div>
+
+  <!-- 1.5 -->
+  <div class="card card-red">
+    <h2>1.5 Ranked vs. Boolean Retrieval</h2>
+    <p>Modern web arama motorları <strong>ranked retrieval</strong> kullanır: kullanıcı serbest metin girer, sistem sonuçları ilgi skoruna göre sıralı döner.</p>
+
+    <table>
+      <tr><th>Boyut</th><th>Boolean Retrieval</th><th>Ranked Retrieval</th></tr>
+      <tr><td>Sorgu tipi</td><td>Yapılandırılmış Boolean</td><td>Serbest metin</td></tr>
+      <tr><td>Sonuçlar</td><td>Tüm eşleşen belgeler, sırasız</td><td>İlgi skoruna göre en iyi k</td></tr>
+      <tr><td>Kullanıcı yükü</td><td>Yüksek (operatör bilmeli)</td><td>Düşük (doğal dil)</td></tr>
+      <tr><td>Feast/famine</td><td>Var</td><td>Sıralama ile hafifletilir</td></tr>
+      <tr><td>Metrik</td><td>Precision &amp; Recall</td><td>Precision@k, NDCG</td></tr>
+    </table>
+  </div>
+
+  <!-- 1.6 -->
+  <div class="card">
+    <h2>1.6 Precision ve Recall</h2>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Precision (Kesinlik)</h4>
+        <pre><code>Precision = Alaka düzeyli alınan belge sayısı
+           ─────────────────────────────────────
+                  Toplam alınan belge sayısı</code></pre>
+      </div>
+      <div class="g-card">
+        <h4>Recall (Geri Çağırma)</h4>
+        <pre><code>Recall = Alaka düzeyli alınan belge sayısı
+         ────────────────────────────────────────
+           Koleksiyondaki toplam alakalı belge sayısı</code></pre>
+      </div>
+    </div>
+    <div class="warning-box">
+      <strong>Precision-Recall Trade-off</strong>
+      Recall artırılırsa (daha fazla alakalı belge bulunur) genellikle precision düşer — alakasız belgeler de dahil olmaya başlar.
+    </div>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Hukuk Öğrencisi → Recall kritik</h4>
+        Alakalı bir içtihadı kaçırmak mesleki felaket olabilir.
+      </div>
+      <div class="g-card">
+        <h4>Gazeteci → Precision kritik</h4>
+        Birkaç iyi haber yeterli; kapsamlı liste gerekmez.
+      </div>
+    </div>
+  </div>
+
+  <!-- DNF & De Morgan -->
+  <div class="card card-teal">
+    <h2>Ek: DNF, De Morgan ve Query Tree</h2>
+
+    <h3>Disjunctive Normal Form (DNF)</h3>
+    <p>DNF: AND'lerden oluşan OR ifadesi. Her Boolean ifadesi DNF'e dönüştürülebilir.</p>
+    <table>
+      <tr><th>İfade</th><th>DNF</th><th>Kural</th></tr>
+      <tr><td>(A AND B) OR C</td><td>(A AND B) OR C</td><td>Zaten DNF</td></tr>
+      <tr><td>(A OR B) AND (C OR D)</td><td>(A AND C) OR (B AND C) OR (A AND D) OR (B AND D)</td><td>Dağılma</td></tr>
+      <tr><td>NOT (A OR B)</td><td>NOT A AND NOT B</td><td>De Morgan</td></tr>
+      <tr><td>NOT (A AND B)</td><td>NOT A OR NOT B</td><td>De Morgan</td></tr>
+    </table>
+
+    <h3>Keyfi Boolean Sorgu İşleme</h3>
+    <p>Sorguyu parse tree olarak modelleriz ve bottom-up (post-order) değerlendiririz:</p>
+    <ul>
+      <li><strong>AND node:</strong> INTERSECT(sol, sağ) → O(|L| + |R|)</li>
+      <li><strong>OR node:</strong> UNION(sol, sağ) → O(|L| + |R|)</li>
+      <li><strong>NOT node:</strong> COMPLEMENT(çocuk) → O(N) — tüm koleksiyon taraması</li>
+    </ul>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card" style="background:#1a3a6e;color:#fff;border:none">
+    <h2 style="color:#fff;border-bottom-color:rgba(255,255,255,.2)">Hızlı Başvuru Kartı</h2>
+    <table style="color:#e0e8f8">
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Inverted Index</strong></td><td>Dictionary (terim → df, pointer) + Postings (sıralı docID listeleri)</td></tr>
+      <tr><td><strong>INTERSECT</strong></td><td>İki sıralı liste, two-pointer → O(x+y)</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>UNION</strong></td><td>Tüm elemanları tut → O(x+y)</td></tr>
+      <tr><td><strong>ANDNOT</strong></td><td>px elemanlarını py'de yoksa tut → O(x+y), tümleyen gerekmez</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Query Opt.</strong></td><td>AND terimlerini artan df sırasıyla işle</td></tr>
+      <tr><td><strong>OR NOT</strong></td><td>O(x+y) ile yapılamaz — tümleyen O(N)</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Westlaw</strong></td><td>/s aynı cümle, /p aynı paragraf, /k k kelime içinde</td></tr>
+      <tr><td><strong>Precision</strong></td><td>Alaka/Alınan &nbsp;|&nbsp; <strong>Recall</strong>: Alaka/Toplam Alakalı</td></tr>
+    </table>
+  </div>
+
+</div>
+</div><!-- /lesson -->
+
+<!-- ==================== QUIZ ==================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Skor</span>
+    <div class="score-track"><div class="score-fill" id="scoreBar" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Başla</button>
+</div>
+</div>
+
+<!-- ==================== CLASSIC ==================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="info-box" style="margin-bottom:24px">
+    <strong>Nasıl Çalışır?</strong>
+    Her sorunun başlığına tıkla → Soruyu gör ve kendi cevabını düşün → Tekrar tıkla → Model cevabı aç.
+  </div>
+
+  <!-- K1 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — Inverted Index İnşası (Temel)</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Aşağıdaki dört belge için, büyük-küçük harf dönüşümü (case-folding) ve stop-word kaldırma (stop kelimeler: <em>to, be, or, not, is, all, that</em>) uyguladıktan sonra inverted index'i oluşturun. Dictionary'yi df değerleriyle ve postings listelerini gösterin. Ardından şu sorguyu cevaplayın: <em>(exist OR gold) AND nothing</em></p>
+      <pre><code>Doc 1: "to be or not to be"
+Doc 2: "to be is to exist"
+Doc 3: "not all that glitters is gold"
+Doc 4: "all or nothing"</code></pre>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Model Cevap:</strong></p>
+      <p><strong>Ön işleme sonrası kalan tokenlar:</strong></p>
+      <pre><code>Doc 1: (boş — tüm tokenlar stop word)
+Doc 2: exist
+Doc 3: glitters, gold
+Doc 4: nothing</code></pre>
+      <p><strong>Inverted Index:</strong></p>
+      <pre><code>exist:    df=1 → [2]
+glitters: df=1 → [3]
+gold:     df=1 → [3]
+nothing:  df=1 → [4]</code></pre>
+      <p><strong>Sorgu: (exist OR gold) AND nothing</strong></p>
+      <pre><code>OR(exist[2], gold[3])     = [2, 3]
+AND([2,3], nothing[4])    = []   ← boş kesişim</code></pre>
+      <div class="success-box">Sonuç: Hiçbir belge eşleşmiyor. "nothing" yalnızca Doc 4'te, ancak Doc 4 ne exist ne de gold içeriyor.</div>
+    </div>
+  </div>
+
+  <!-- K2 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — INTERSECT Algoritması Trace + Karmaşıklık</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Şu postings listelerine sahipsiniz:</p>
+      <pre><code>A: [1, 3, 5, 7, 9, 11, 13]  (df = 7)
+B: [2, 3, 6, 9, 11, 14]     (df = 6)
+C: [3, 7, 9, 15, 20]        (df = 5)</code></pre>
+      <p>(a) A AND B AND C sorgusu için terimlerin işlenme sırası ne olmalıdır ve neden?<br>
+      (b) İlk kesişim için INTERSECT algoritmasını adım adım izleyin.<br>
+      (c) INTERSECT(p1, p2)'nin zaman karmaşıklığı nedir?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a)</strong> Sıra: <strong>C, B, A</strong> (artan df: 5, 6, 7). En küçük listeyi önce işlemek her adımdaki ara sonuç boyutunu minimize eder.</p>
+      <p><strong>(b) INTERSECT(C=[3,7,9,15,20], B=[2,3,6,9,11,14]):</strong></p>
+      <pre><code>p1=3,  p2=2  → 2&lt;3,  p2 ilerle
+p1=3,  p2=3  → EŞLEŞTİ! 3 ekle; ikisi de ilerle
+p1=7,  p2=6  → 6&lt;7,  p2 ilerle
+p1=7,  p2=9  → 7&lt;9,  p1 ilerle
+p1=9,  p2=9  → EŞLEŞTİ! 9 ekle; ikisi de ilerle
+p1=15, p2=11 → 11&lt;15, p2 ilerle
+p1=15, p2=14 → 14&lt;15, p2 ilerle
+p1=15, p2=NIL → DUR
+Sonuç: [3, 9]</code></pre>
+      <p><strong>(c)</strong> <span class="badge badge-blue">O(x + y)</span> — Her gösterici elemanı başına en fazla bir kez ilerler. Toplam adım sayısı ≤ x + y.</p>
+    </div>
+  </div>
+
+  <!-- K3 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — Boolean vs. Ranked Retrieval + Precision/Recall</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Bir hukuk öğrencisi, hem "sözleşme ihlali" hem de "ihmal" nedeniyle tazminat verilen tüm davaları bulmak istiyor. Bir gazeteci ise iklim değişikliğinin herhangi bir boyutuna ilişkin haber aramaktadır.</p>
+      <p>(a) Hukuk öğrencisi için hangi retrieval modeli daha uygun? Neden?<br>
+      (b) Gazeteci için hangi model daha uygun? Neden?<br>
+      (c) Precision ve Recall'ı tanımlayın. Her kullanıcı için hangisi daha kritik?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a)</strong> Hukuk öğrencisi → <strong>Boolean retrieval</strong>. İhtiyaç tam olarak yapılandırılmış: her iki koşul da sağlanmalıdır. Boolean, exact-match semantiği garanti eder; Westlaw gibi sistemler proximity operatörleriyle profesyonel doğruluk sağlar.</p>
+      <p><strong>(b)</strong> Gazeteci → <strong>Ranked retrieval</strong>. "İklim değişikliği" geniş bir konudur. Serbest metin girişiyle en alakalı k sonuç döner; gazeteci tam terminolojiyi bilmek zorunda kalmaz.</p>
+      <p><strong>(c)</strong></p>
+      <pre><code>Precision = Alakalı&amp;Alınan / Toplam Alınan
+Recall    = Alakalı&amp;Alınan / Toplam Alakalı</code></pre>
+      <div class="grid2">
+        <div class="g-card"><h4>Hukuk öğrencisi → Recall kritik</h4>Alakalı bir içtihadı kaçırmak mesleki felaket olabilir.</div>
+        <div class="g-card"><h4>Gazeteci → Precision kritik</h4>Birkaç iyi haber yeterli; kapsamlı bir liste gerekmez.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- K4 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — Sorgu Optimizasyonu (Büyük df'li OR Grupları)</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> df değerleri aşağıdaki gibi olan bir koleksiyonda şu sorguyu işleyeceksiniz:</p>
+      <pre><code>(tangerine OR trees) AND (marmalade OR skies) AND (kaleidoscope OR eyes)
+
+tangerine=100.000, trees=200.000, marmalade=500.000
+skies=1.000.000,   kaleidoscope=50.000,  eyes=2.000.000</code></pre>
+      <p>(a) Ara sonuçları minimize etmek için önerilen işlenme sırası nedir?<br>
+      (b) OR sonuç boyutunu nasıl tahmin edersiniz?<br>
+      (c) Boyut-sırası heuristiği neden optimal değildir?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) OR grup büyüklüklerini tahmin et (üst sınır = df toplamı):</strong></p>
+      <pre><code>Grup A: tangerine OR trees      = 100k + 200k  = 300.000
+Grup B: marmalade OR skies      = 500k + 1M    = 1.500.000
+Grup C: kaleidoscope OR eyes    = 50k  + 2M    = 2.050.000
+
+İşlenme sırası: A → AND → B → AND → C</code></pre>
+      <p><strong>(b)</strong> OR tahmini: Üst sınır = bireysel df'lerin toplamı (örtüşme olmadığı varsayımı). Gerçek boyut ≤ df(A) + df(B).</p>
+      <p><strong>(c)</strong> Optimal değil çünkü: (1) OR tahminleri üst sınırdır — gerçek boyut örtüşmeye bağlıdır; (2) optimal sıra, önceden bilinemeyen gerçek ara sonuç boyutlarına bağlıdır; (3) kompleks sorgularda greedy heuristik global optimumu bulamayabilir.</p>
+    </div>
+  </div>
+
+  <!-- K5 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — NOT İşleme + Westlaw Proximity Sorgusu</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru (iki parçalı):</strong></p>
+      <p><em>Parça A:</em> <span class="inline-code">friends AND romans AND (NOT countrymen)</span> sorgusunda. df: friends=50.000, romans=20.000, countrymen=10.000, N=1.000.000. NOT countrymen'in efektif boyutu nedir? Sorgu nasıl verimli işlenir?</p>
+      <p><em>Parça B:</em> "professor", "teacher" veya "lecturer" kelimelerinin "explain" ile aynı cümlede geçtiği belgeleri bulmak için Westlaw tarzı sorguyu yazın. Proximity operatörünün AND'e göre üstünlüğünü açıklayın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Parça A:</strong></p>
+      <pre><code>NOT countrymen boyutu: 1.000.000 - 10.000 = 990.000 (devasa!)
+
+Verimli strateji — tümlemi hiçbir zaman materyalize etme:
+  1. INTERSECT(romans[20k], friends[50k]) → R1, boyut ≤ 20.000
+  2. R1 ve countrymen[10k]'i eşzamanlı tara; countrymen'de OLMAYAN
+     R1 docID'lerini ekle → son sonuç
+
+Toplam zaman: O(|romans| + |friends| + |countrymen|) = O(80.000)
+(990.000 elemanlı tümlemi materyalize etmekten çok daha hızlı)</code></pre>
+      <p><strong>Parça B:</strong></p>
+      <pre><code>Westlaw sorgusu:
+  (professor OR teacher OR lecturer) /s explain
+
+Alternatif (daha geniş):
+  (professor OR teacher OR lecturer) /p explain</code></pre>
+      <div class="warning-box">
+        <strong>Neden AND değil /s?</strong>
+        AND, "professor"un giriş paragrafında "explain"in sonuç bölümünde geçtiği belgeleri de eşleştirir → semantik bağlantı yok. /s, her ikisinin aynı cümle içinde geçmesini zorunlu kılar → gerçek yakınlık garantisi.
+      </div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /classic -->
+
+<script>
+// Tab switching
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// Classic accordion
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+// Quiz data
+const questions = [
+  {
+    q: "Büyük koleksiyonlar için term-document incidence matrix yaklaşımının temel problemi nedir?",
+    opts: ["AND sorgularını destekleyemez","İnşa edilmesi çok yavaştır","Gerçek dünya koleksiyonlarında devasa ve son derece seyrek (sparse) olur","NOT operatörünü destekleyemez"],
+    ans: 2,
+    exp: "Matris milyonlarca terim × milyonlarca belge boyutunda olacak ve büyük çoğunluğu sıfır (belge terimi içermiyor) olacaktır. Bu da depolamayı tamamen pratik dışı hale getirir."
+  },
+  {
+    q: "INTERSECT algoritmasının zaman karmaşıklığı nedir? (|p1|=x, |p2|=y)",
+    opts: ["O(x × y)","O(x + y)","O(log(x + y))","O(x²)"],
+    ans: 1,
+    exp: "Her gösterici kendi listesinde en fazla bir kez ilerler. Toplam adım sayısı ≤ x + y olduğu için karmaşıklık O(x+y)'dir."
+  },
+  {
+    q: "df değerleri: A=7, B=6, C=5 olan terimler için 'A AND B AND C' sorgusunun optimal işlenme sırası nedir?",
+    opts: ["A, B, C","B, A, C","C, B, A","A, C, B"],
+    ans: 2,
+    exp: "Artan df (belge frekansı) sırası: C(5) < B(6) < A(7). En küçük listeden başlamak, her adımdaki ara sonuç boyutunu minimize eder."
+  },
+  {
+    q: "Inverted index inşa etmenin 4 adımı arasında AŞAĞIDAKİLERDEN HANGİSİ YOKTUR?",
+    opts: ["Metin tokenize etmek","Belgeleri alaka skoruna göre sıralamak","Dilbilimsel ön işleme","Emit, sort, merge adımı"],
+    ans: 1,
+    exp: "4 adım: (1) Belge topla, (2) Tokenize et, (3) Dilbilimsel ön işleme (stemming, lowercasing vb.), (4) Emit/sort/merge. Sıralama inverted index inşasının değil, ranked retrieval'ın parçasıdır."
+  },
+  {
+    q: "'Brutus OR NOT Caesar' sorgusunun neden O(x+y) zamanda çalışamayacağını en iyi açıklayan seçenek hangisidir?",
+    opts: ["OR operasyonları AND'den her zaman daha yavaştır","NOT Caesar'ın tümleyeni koleksiyonun neredeyse tamamı olabilir — O(N)","INTERSECT algoritması OR sorgularını desteklemez","Brutus listesi sıralı olmak zorunda değildir"],
+    ans: 1,
+    exp: "NOT Caesar = Caesar'ın postings listesinde OLMAYAN tüm belgeler. Bu, N - |Caesar| belge olabilir; yani neredeyse tüm koleksiyon. Bu büyüklükteki bir kümeyi oluşturmak O(N) zaman alır."
+  },
+  {
+    q: "Inverted index'teki 'document frequency (df)' neyi ifade eder?",
+    opts: ["Bir terimin bir belgede kaç kez geçtiği","Koleksiyondaki toplam belge sayısı","Bir terimin kaç farklı belgede geçtiği","Bir belgenin ne sıklıkla erişildiği"],
+    ans: 2,
+    exp: "df = document frequency = terimin içinde geçtiği farklı belge sayısı. Dictionary'de saklanır ve query optimization'da temel ölçüt olarak kullanılır."
+  },
+  {
+    q: "Westlaw hangi retrieval modelini kullanır?",
+    opts: ["TF-IDF ile ranked retrieval","Sinir ağı tabanlı retrieval","Extended Boolean retrieval (proximity operatörleri ile)","Probabilistik retrieval"],
+    ans: 2,
+    exp: "Westlaw, hukuki profesyoneller için AND/OR/NOT operatörlerine ek olarak /s (aynı cümle), /p (aynı paragraf), /k (k kelime içinde) gibi proximity operatörlerini destekleyen extended Boolean modeli kullanır."
+  },
+  {
+    q: "Boolean retrieval'daki 'feast or famine' problemi ne demektir?",
+    opts: ["Sorguların hesaplanması çok pahalıdır","Çok fazla veya çok az sonuç alınması — ara sonuç yoktur","Sonuçların sıralanamıyor olması","Index inşası sırasında bellek taşması"],
+    ans: 1,
+    exp: "Boolean modeli exact-match çalışır. Geniş sorgular 'feast' (binlerce sonuç), dar veya yanlış sorgular 'famine' (sıfır sonuç) verir. Ranked retrieval bunu sıralama ile hafifletir."
+  },
+  {
+    q: "Westlaw proximity operatörü '/s' ne anlama gelir?",
+    opts: ["s kelime içinde","Aynı cümle içinde","Aynı bölüm içinde","Eşanlamlı arama"],
+    ans: 1,
+    exp: "/s = same sentence (aynı cümle). Her iki terim de aynı cümle içinde geçmek zorundadır. /p = same paragraph, /k = within k words şeklindedir."
+  },
+  {
+    q: "Precision'ın doğru formülü hangisidir?",
+    opts: ["Alakalı&Alınan belge sayısı / Koleksiyondaki toplam alakalı belge sayısı","Alakalı&Alınan belge sayısı / Toplam alınan belge sayısı","Toplam alınan belge sayısı / Koleksiyondaki toplam belge sayısı","Koleksiyondaki toplam alakalı / Toplam alınan belge"],
+    ans: 1,
+    exp: "Precision = (alakalı ve alınan) / (toplam alınan). Recall = (alakalı ve alınan) / (toplam alakalı). Precision alınan sonuçların ne kadarının alakalı olduğunu; Recall ise ne kadar alakalı belgenin bulunabildiğini ölçer."
+  },
+  {
+    q: "friends AND romans AND (NOT countrymen) sorgusunda; df: friends=50k, romans=20k, countrymen=10k, N=1M. NOT countrymen'in boyutu nedir?",
+    opts: ["10.000","50.000","990.000","1.000.000"],
+    ans: 2,
+    exp: "NOT countrymen = koleksiyondaki tüm belgeler EKSI countrymen listesi = 1.000.000 - 10.000 = 990.000. Bu yüzden NOT tümleyeni hiçbir zaman materyalize edilmemeli; set-difference olarak işlenmelidir."
+  },
+  {
+    q: "UNION (OR merge) algoritması INTERSECT'ten nasıl farklıdır?",
+    opts: ["UNION bir liste biter biter durur; INTERSECT kalan elemanları ekler","UNION bir liste biter bitmez diğerinin kalan elemanlarını ekler; INTERSECT durur","UNION O(x×y) karmaşıklığına sahipken INTERSECT O(x+y)","Her iki algoritma da aynı implementasyona sahiptir"],
+    ans: 1,
+    exp: "INTERSECT: iki docID'nin AYNI anda her iki listede de olması gerekir; bir liste biter → durur (kalanlar eşleşme sağlayamaz). UNION: bir liste biter → diğerinin kalan TÜM elemanları sonuca eklenir."
+  },
+  {
+    q: "NOT (A OR B) ifadesinin Disjunctive Normal Form (DNF) karşılığı hangisidir?",
+    opts: ["NOT A OR NOT B","NOT A AND NOT B","A AND NOT B","NOT A OR B"],
+    ans: 1,
+    exp: "De Morgan yasası: NOT(A OR B) = NOT A AND NOT B. Bu tek bir AND kümesi olduğundan DNF açısından da geçerlidir."
+  },
+  {
+    q: "Ranked retrieval hakkında aşağıdakilerden hangisi DOĞRUDUR?",
+    opts: ["Kullanıcıların Boolean operatörlerini bilmesini gerektirir","Tüm eşleşen belgeleri sırasız döner","Belgeleri alaka skoruna göre en iyi k sonuç olarak döner","Boolean retrieval'a kıyasla kullanıcı yükü daha yüksektir"],
+    ans: 2,
+    exp: "Ranked retrieval: serbest metin sorgusu → ilgi skoruna göre sıralı top-k sonuç. Kullanıcı operatör bilmek zorunda değildir. Boolean'a göre kullanıcı yükü çok düşüktür."
+  },
+  {
+    q: "Inverted index'in hangi bölümü genellikle hızlı erişim için bellekte tutulur?",
+    opts: ["Postings listeleri","Dictionary (sözlük)","Hem dictionary hem postings","Hiçbiri — ikisi de diskte"],
+    ans: 1,
+    exp: "Dictionary (terim → df, postings'e işaretçi) hızlı arama için bellekte tutulur. Postings listeleri çok büyük olabileceğinden diskte saklanır ve yalnızca erişim gerektiğinde okunur."
+  }
+];
+
+let score = 0;
+let answered = 0;
+
+function buildQuiz() {
+  const c = document.getElementById('quizContainer');
+  c.innerHTML = '';
+  score = 0; answered = 0;
+  updateScore();
+  questions.forEach((q, qi) => {
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;min-width:18px">${['A','B','C','D'][oi]})</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    c.innerHTML += `
+      <div class="q-card" id="qcard_${qi}">
+        <div class="q-num">Soru ${qi+1} / 15</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}"><strong>Açıklama:</strong> ${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(o => o.disabled = true);
+  const selected = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) {
+    selected.classList.add('correct');
+    score++;
+    answered++;
+  } else {
+    selected.classList.add('wrong');
+    correct.classList.add('correct');
+    answered++;
+  }
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('scoreBar').style.width = pct + '%';
+  document.getElementById('scoreVal').textContent = `${score} / ${questions.length}`;
+}
+
+function resetQuiz() { buildQuiz(); }
+
+buildQuiz();
+</script>
+</body>
+</html>
