@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch3: Dictionaries and Tolerant Retrieval</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:90px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+/* QUIZ */
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer}
+.reset-btn:hover{background:#0f2448}
+/* Classic */
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 14px;font-size:.82rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Home</a>
+  <h1>Chapter 3: Dictionaries and Tolerant Retrieval</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Lesson</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Classic Questions · 5</button>
+</div>
+
+<!-- ===================== LESSON ===================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 3.1 -->
+  <div class="card">
+    <h2>3.1 Search Structures for Dictionaries</h2>
+    <p>When processing a query, the IR system must look up each query term in the <strong>dictionary</strong> (the vocabulary data structure) to retrieve its postings list pointer. Two broad classes of solutions exist: <strong>hashing</strong> and <strong>search trees</strong>.</p>
+
+    <h3>Hashing</h3>
+    <p>Each term is hashed to an integer index; collisions are handled by auxiliary structures. Query-time lookup is <strong>O(1)</strong>. However, hashing has critical weaknesses for IR:</p>
+    <div class="grid3">
+      <div class="g-card">
+        <h4>No Prefix Queries</h4>
+        Terms sharing a common prefix (e.g., all terms starting with 'automat') hash to completely different values — no structural locality.
+      </div>
+      <div class="g-card">
+        <h4>No Variant Lookup</h4>
+        Cannot efficiently support minor variant lookup (accented vs. unaccented characters).
+      </div>
+      <div class="g-card">
+        <h4>Growth Problem</h4>
+        Vocabulary size grows dynamically; a hash function designed for current needs may not suffice as the collection grows.
+      </div>
+    </div>
+
+    <h3>Search Trees — B-trees</h3>
+    <p>Search trees require a prescribed ordering on characters (A–Z for English). They allow enumeration of all terms with a given prefix in <strong>O(log M)</strong> time, where M is the vocabulary size. The most widely used search tree for IR dictionaries is the <strong>B-tree</strong>: every internal node has between <em>a</em> and <em>b</em> children (for fixed integers a, b).</p>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Binary Search Tree</h4>
+        O(log M) comparisons but requires rebalancing on insertions and deletions.
+      </div>
+      <div class="g-card">
+        <h4>B-tree</h4>
+        Self-balancing, fan-out of [a,b] children per node; height = O(log<sub>b</sub> M). Each disk read fetches a full node — efficient for disk-resident dictionaries.
+      </div>
+      <div class="g-card">
+        <h4>B-tree Advantages</h4>
+        Unlike hashing, B-trees support <strong>prefix queries</strong>, <strong>range queries</strong>, and <strong>wildcard lookups</strong>.
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Key Insight</strong>
+      A B-tree can be viewed as collapsing multiple levels of a binary search tree into one disk block per node, which is particularly efficient for disk-resident dictionaries (each node = one disk block, so each level = one disk read).
+    </div>
+  </div>
+
+  <!-- 3.2 -->
+  <div class="card card-teal">
+    <h2>3.2 Wildcard Queries</h2>
+    <p>A <strong>wildcard query</strong> uses the * symbol to represent any sequence of characters. Users use wildcard queries when: (1) uncertain about spelling (<em>S*dney</em> for Sydney/Sidney), (2) seeking variant spellings (color/colour), (3) seeking stemming variants (judicial*), (4) unsure of a foreign word's rendition (Universit* Stuttgart).</p>
+
+    <h3>Trailing Wildcard Queries (mon*)</h3>
+    <p>A query ending in * is a <strong>trailing wildcard</strong>. Handle with a standard B-tree: walk the tree following the prefix characters (m, o, n), then enumerate all terms in the resulting subtree — the set W. Look up each term in W in the standard inverted index.</p>
+    <div class="info-box">
+      <strong>Cost:</strong> O(log M + |W|) for enumeration plus |W| standard postings lookups.
+    </div>
+
+    <h3>Leading Wildcard Queries (*mon)</h3>
+    <p>A query starting with * is a <strong>leading wildcard</strong>. Use a <strong>reverse B-tree</strong>: a B-tree built on reversed terms. The term 'lemon' is stored as 'nomel'. A leading wildcard *mon is reversed to nom*, then looked up in the reverse B-tree to enumerate all terms ending in 'mon'.</p>
+
+    <h3>General Wildcard with One * (se*mon)</h3>
+    <p>Handled using BOTH the regular B-tree and the reverse B-tree: enumerate W = terms starting with 'se' (B-tree), enumerate R = terms ending with 'mon' (reverse B-tree), then take the intersection W ∩ R.</p>
+
+    <h3>3.2.1 Permuterm Index</h3>
+    <p>For general wildcard queries with a single *, the <strong>permuterm index</strong> provides an elegant alternative. The idea: append a special end-of-term symbol <strong>$</strong> to each vocabulary term, then store all rotations of the augmented term in a B-tree, each pointing back to the original term.</p>
+
+    <div class="info-box">
+      <strong>Example: term "hello"</strong><br>
+      Augmented: hello$. Rotations (6 total): hello$, ello$h, llo$he, lo$hel, o$hell, $hello — each pointing back to 'hello'.
+    </div>
+
+    <table>
+      <tr><th>Wildcard Query</th><th>Rotation Step</th><th>Permuterm Prefix Lookup</th></tr>
+      <tr><td>m*n (general)</td><td>n$m*</td><td>Look up prefix <strong>n$m</strong></td></tr>
+      <tr><td>X*Y (general)</td><td>Y$X*</td><td>Look up prefix <strong>Y$X</strong></td></tr>
+      <tr><td>X* (trailing)</td><td>$X*</td><td>Look up prefix <strong>$X</strong></td></tr>
+      <tr><td>*Y (leading)</td><td>Y$*</td><td>Look up prefix <strong>Y$</strong></td></tr>
+    </table>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Limitation: Multiple *</h4>
+        Queries like fi*mo*er require post-filtering the permuterm results — enumerate from er$fi* prefix, then filter to keep only those containing 'mo'.
+      </div>
+      <div class="g-card">
+        <h4>Space Cost</h4>
+        A term of length k generates k+1 rotations. The permuterm index is ~10x larger than the original vocabulary.
+      </div>
+    </div>
+
+    <h3>3.2.2 k-gram Index for Wildcard Queries</h3>
+    <p>A <strong>k-gram</strong> is a contiguous sequence of k characters. The k-gram index uses $ as a start/end-of-term marker. For the term <em>castle</em>, the 3-grams are: <span class="inline-code">$ca, cas, ast, stl, tle, le$</span>. The k-gram dictionary maps each k-gram to vocabulary terms containing it; postings are stored in lexicographic order.</p>
+
+    <div class="info-box">
+      <strong>Answering wildcard query re*ve:</strong> Generate the Boolean query <span class="inline-code">$re AND ve$</span>, look it up in the 3-gram index, and intersect the postings lists. Terms like 'relive', 'remove', 'retrieve' will match.
+    </div>
+
+    <div class="warning-box">
+      <strong>Post-filtering is Required</strong>
+      The k-gram Boolean query may return false positives. For query <em>red*</em>, the query <span class="inline-code">$re AND red</span> returns 'retired' (contains $re and red as 3-grams, but does NOT start with 'red'). Each candidate must be string-matched against the original wildcard pattern.
+    </div>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Advantage over Permuterm</h4>
+        Much smaller index (~3–10x smaller) since k-gram count per term is linear in term length, not equal to the number of rotations.
+      </div>
+      <div class="g-card">
+        <h4>Dual Use</h4>
+        The k-gram index is also used for spelling correction (Section 3.3.4), making it doubly useful.
+      </div>
+    </div>
+  </div>
+
+  <!-- 3.3 -->
+  <div class="card card-purple">
+    <h2>3.3 Spelling Correction</h2>
+    <p>The goal of spelling correction is to retrieve documents for the intended query even when the query contains spelling errors. Users make errors either accidentally or because a term has no unambiguous spelling.</p>
+
+    <h3>Two Core Principles</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Nearest Correction</h4>
+        Among all plausible correct spellings, select the one with <strong>minimum distance</strong> (edit distance or k-gram overlap) to the misspelled query term.
+      </div>
+      <div class="g-card">
+        <h4>More Common Term</h4>
+        When two candidates are equally close, prefer the one that is <strong>more frequent</strong> in the collection (higher document frequency) or more frequently queried (from query logs).
+      </div>
+    </div>
+
+    <h3>Modes of Exposing Correction to Users</h3>
+    <ol>
+      <li>Always retrieve documents for both the original query and all spell-corrected versions.</li>
+      <li>Correct only when the original term is <strong>not in the dictionary</strong>.</li>
+      <li>Correct only when the original query returns <strong>fewer than a threshold</strong> number of results (e.g., &lt;5).</li>
+      <li>Present a <strong>"Did you mean X?"</strong> suggestion to the user.</li>
+    </ol>
+
+    <h3>Isolated-term vs. Context-sensitive Correction</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Isolated-term Correction</h4>
+        Correct each query term independently. Works for 'carot' → 'carrot'. <strong>Fails</strong> for 'flew form Heathrow' where 'form' is correctly spelled but semantically wrong ('from' is intended).
+      </div>
+      <div class="g-card">
+        <h4>Context-sensitive Correction</h4>
+        Consider all query terms together. Enumerate corrections of each term, combine into candidate phrases, evaluate each against the collection (biword frequency or query logs), select most plausible.
+      </div>
+    </div>
+
+    <h3>3.3.3 Edit Distance (Levenshtein Distance)</h3>
+    <p>The <strong>edit distance</strong> between strings s1 and s2 is the minimum number of single-character edit operations needed to transform s1 into s2. Standard operations: (i) insert a character, (ii) delete a character, (iii) substitute one character for another.</p>
+
+    <pre><code>EDITDISTANCE(s1, s2):
+  m[i,0] = i  for all i   (delete i chars from s1)
+  m[0,j] = j  for all j   (insert j chars into s1)
+  for i=1 to |s1|:
+    for j=1 to |s2|:
+      m[i,j] = min(
+        m[i-1,j-1] + (0 if s1[i]==s2[j] else 1),  # substitute/match
+        m[i-1,j] + 1,   # delete from s1
+        m[i,j-1] + 1    # insert into s1
+      )
+  return m[|s1|][|s2|]</code></pre>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Time Complexity</h4>
+        O(|s1| × |s2|) — quadratic in string lengths.
+      </div>
+      <div class="g-card">
+        <h4>Space Complexity</h4>
+        O(|s1| × |s2|), reducible to O(min(|s1|,|s2|)) with rolling arrays.
+      </div>
+      <div class="g-card">
+        <h4>Bound</h4>
+        edit_distance(s1, s2) ≤ max(|s1|, |s2|)
+      </div>
+    </div>
+
+    <div class="warning-box">
+      <strong>Scalability Problem</strong>
+      For a vocabulary of size V, computing edit distance from the query to every vocabulary term costs O(V × |s|²) — too slow for large vocabularies. Heuristics are needed: only compare terms sharing the first letter, or use k-gram indexing to pre-filter candidates.
+    </div>
+
+    <h3>3.3.4 k-gram Index for Spelling Correction</h3>
+    <p>The k-gram index retrieves vocabulary terms that share many k-grams with the query term q. These are likely to have low edit distance to q. The <strong>Jaccard coefficient</strong> measures overlap:</p>
+
+    <div class="info-box">
+      <strong>Jaccard(A, B) = |A ∩ B| / |A ∪ B|</strong><br>
+      where A = k-grams of q, B = k-grams of vocabulary term t. Range: 0 (no overlap) to 1 (identical sets).
+    </div>
+
+    <p>On-the-fly computation while scanning postings:</p>
+    <ul>
+      <li><strong>|A ∩ B|</strong>: count how many k-gram postings for q contain term t.</li>
+      <li><strong>|A ∪ B|</strong> = |A| + |B| − |A ∩ B|: |A| is known; |B| is pre-stored as t's k-gram count.</li>
+    </ul>
+
+    <div class="info-box">
+      <strong>Example (query "bord", bigrams):</strong><br>
+      bord's bigrams: bo, or, rd (|A|=3).<br>
+      border (|B|=6 bigrams: $b, bo, or, rd, de, er) → shared = {bo,or,rd} = 3. Jaccard = 3/(3+6−3) = <strong>0.5</strong><br>
+      boardroom (|B|=8) → shared = {bo,rd} = 2. Jaccard = 2/(3+8−2) = <strong>0.22</strong>
+    </div>
+
+    <div class="flow">
+      <div class="flow-box">Query term</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">k-gram index<br><small>(Jaccard filter)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Candidate set</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Edit distance<br><small>(exact ranking)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Best correction</div>
+    </div>
+
+    <h3>3.3.5 Context-Sensitive Spelling Correction</h3>
+    <p>For queries like 'flew form Heathrow' where all individual terms are correctly spelled, isolated-term correction fails. Context-sensitive correction:</p>
+    <ol>
+      <li>Enumerate spelling corrections for each query term (using edit distance / k-grams).</li>
+      <li>Generate candidate corrected phrases by substituting corrections at each position.</li>
+      <li>Evaluate each candidate phrase against a <strong>biword index</strong> or <strong>query log frequency</strong>.</li>
+      <li>Select the candidate phrase with the highest frequency / plausibility.</li>
+    </ol>
+
+    <div class="warning-box">
+      <strong>Combinatorial Explosion</strong>
+      For n misspelled terms each with k corrections: k<sup>n</sup> candidate phrases. Heuristic pruning (retain only top-10 most common bigrams at each prefix step) is essential. For 'flew form Heathrow', 'flew from' is a common bigram → selected as correction.
+    </div>
+  </div>
+
+  <!-- 3.4 -->
+  <div class="card card-amber">
+    <h2>3.4 Phonetic Correction — Soundex</h2>
+    <p>Phonetic correction handles queries where the user knows the <em>sound</em> of a name but not its spelling (e.g., 'Herman' could be 'Hermann', 'Herrmann'). The approach: generate a 'phonetic hash' such that similarly-sounding terms hash to the same code. The classic algorithm is <strong>Soundex</strong>, originally developed for U.S. census records.</p>
+
+    <h3>Soundex Algorithm (5 Steps)</h3>
+    <table>
+      <tr><th>Step</th><th>Rule</th></tr>
+      <tr><td><strong>1</strong></td><td>Retain the first letter of the term unchanged.</td></tr>
+      <tr><td><strong>2</strong></td><td>Convert vowels A, E, I, O, U and the letters H, W, Y to '0' (zero).</td></tr>
+      <tr><td><strong>3</strong></td><td>Map consonants: B,F,P,V→1 · C,G,J,K,Q,S,X,Z→2 · D,T→3 · L→4 · M,N→5 · R→6</td></tr>
+      <tr><td><strong>4</strong></td><td>Remove consecutive duplicate digits (e.g., 55 → 5).</td></tr>
+      <tr><td><strong>5</strong></td><td>Remove all zeros; pad with trailing zeros if needed; return the first 4 characters (1 letter + 3 digits).</td></tr>
+    </table>
+
+    <div class="info-box">
+      <strong>Example: Hermann → H650</strong><br>
+      H retained · e→0 · r→6 · m→5 · a→0 · n→5 · n→5 (dup)<br>
+      Digits: 0,6,5,0,5,5 → remove dups: 0,6,5,0,5 → remove 0s: 6,5,5 → remove dup: 6,5 → pad → <strong>H650</strong><br><br>
+      Herman → also <strong>H650</strong>. So searching 'herman' retrieves 'Hermann', 'Herman', 'Herrmann', etc.
+    </div>
+
+    <h3>Worked Examples</h3>
+    <table>
+      <tr><th>Name</th><th>Steps</th><th>Soundex Code</th></tr>
+      <tr><td>Hermann</td><td>H · e→0,r→6,m→5,a→0,n→5,n→5(dup) → 6,5 → pad</td><td><strong>H650</strong></td></tr>
+      <tr><td>Thompson</td><td>T · h→0,o→0,m→5,p→1,s→2,o→0,n→5 → 5,1,2,5</td><td><strong>T512</strong></td></tr>
+      <tr><td>Knight</td><td>K · n→5,i→0,g→2,h→0,t→3 → 5,2,3</td><td><strong>K523</strong></td></tr>
+      <tr><td>Czar</td><td>C · z→2,a→0,r→6 → 2,6 → pad</td><td><strong>C260</strong></td></tr>
+      <tr><td>Smith / Smythe</td><td>S · m→5,i/y→0,t→3,h→0,e→0 → 5,3 → pad</td><td><strong>S530</strong> (both!)</td></tr>
+    </table>
+
+    <div class="danger-box">
+      <strong>Soundex Limitations</strong>
+      <ul>
+        <li><strong>First letter always retained:</strong> Tchaikovsky (T212) ≠ Chaikovsky (C212) despite being phonetically identical — different first letters always produce different codes.</li>
+        <li><strong>Writing-system dependent:</strong> Chinese names in Wade-Giles vs. Pinyin may map differently (e.g., Peking vs. Beijing).</li>
+        <li><strong>Works well for European names</strong> but fails in many other cases.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card card-red">
+    <h2>Quick Reference — Chapter 3 Key Facts</h2>
+    <table>
+      <tr><th>Concept</th><th>Key Facts</th></tr>
+      <tr><td><strong>Hashing</strong></td><td>O(1) lookup; no prefix/range queries; vocabulary growth issues</td></tr>
+      <tr><td><strong>B-tree</strong></td><td>O(log M) lookup; supports prefix/range queries; self-balancing; disk-friendly</td></tr>
+      <tr><td><strong>Trailing wildcard (mon*)</strong></td><td>B-tree prefix walk → enumerate subtree W → lookup W in inverted index</td></tr>
+      <tr><td><strong>Leading wildcard (*mon)</strong></td><td>Reverse B-tree: store reversed terms; lookup nom* prefix</td></tr>
+      <tr><td><strong>General wildcard (se*mon)</strong></td><td>B-tree(se*) ∩ Reverse B-tree(*mon) → terms starting 'se', ending 'mon'</td></tr>
+      <tr><td><strong>Permuterm index</strong></td><td>All rotations of term$ in B-tree; rotate query so * is at end; no post-filter (for single *)</td></tr>
+      <tr><td><strong>Permuterm space</strong></td><td>k+1 entries per k-length term; ~10x vocabulary size increase</td></tr>
+      <tr><td><strong>k-gram index</strong></td><td>k-grams in dictionary; postings = vocab terms; Boolean query + post-filter required</td></tr>
+      <tr><td><strong>Levenshtein distance</strong></td><td>Min insert/delete/substitute ops; O(|s1|×|s2|) dynamic programming</td></tr>
+      <tr><td><strong>Edit distance bound</strong></td><td>edit_distance(s1,s2) ≤ max(|s1|,|s2|)</td></tr>
+      <tr><td><strong>Jaccard coefficient</strong></td><td>|A∩B| / |A∪B|; A,B = k-gram sets; range 0–1; normalizes for term length</td></tr>
+      <tr><td><strong>Correction pipeline</strong></td><td>k-gram → candidates (Jaccard) → edit distance → select best</td></tr>
+      <tr><td><strong>Context-sensitive</strong></td><td>Correct full phrase; biword index / query logs; prune with top-k heuristic</td></tr>
+      <tr><td><strong>Soundex (5 steps)</strong></td><td>Keep 1st letter; vowels/H/W/Y→0; consonant groups→digits; dup removal; 4-char code</td></tr>
+      <tr><td><strong>Soundex limitation</strong></td><td>First letter always retained → phonetically same names with different 1st letter fail</td></tr>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ===================== QUIZ ===================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Score</span>
+    <div class="score-track"><div class="score-fill" id="fill" style="width:0%"></div></div>
+    <span class="score-val" id="sval">0 / 15</span>
+  </div>
+  <div id="quiz-area"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Reset Quiz</button>
+</div>
+</div>
+
+<!-- ===================== CLASSIC ===================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q1 — Hashing vs. B-tree: Which structure supports prefix enumeration and why?</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Answer:</strong> Only the <strong>B-tree</strong> supports prefix enumeration. A B-tree stores terms in sorted lexicographic order, so all terms sharing a common prefix form a contiguous range in the tree — enumerable with a single traversal from the prefix node down through the subtree.</p>
+      <p>Hashing distributes keys uniformly by design: two terms with a common prefix (e.g., 'mon', 'monday', 'monkey') will hash to completely different locations with no structural locality. There is no way to enumerate a contiguous range of hash values corresponding to a prefix.</p>
+      <p><strong>Time complexities:</strong></p>
+      <ul>
+        <li>Hashing: O(1) average for exact lookup (amortised).</li>
+        <li>B-tree: O(log<sub>b</sub> M) where b = max children per node, M = vocabulary size. For disk-resident dictionaries, each B-tree level = one disk I/O → height is small (3–4 levels for large vocabularies).</li>
+      </ul>
+      <p><strong>Dynamic insertion:</strong> Both support it; B-tree rebalances automatically. Hashing may require rehashing if the table grows beyond its hash function's range.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q2 — Permuterm Index: Build entries for 'ring' and answer the query r*ng.</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Permuterm entries for 'ring':</strong><br>
+      Augmented term: ring$. Rotations (5 total, each pointing back to 'ring'):</p>
+      <pre>ring$  →  ring
+ing$r  →  ring
+ng$ri  →  ring
+g$rin  →  ring
+$ring  →  ring</pre>
+      <p><strong>Answering wildcard query r*ng:</strong><br>
+      Rotate so * appears at the end: <strong>ng$r*</strong>. Lookup prefix <strong>ng$r</strong> in the permuterm B-tree. All rotations beginning with 'ng$r' correspond to original terms that begin with 'r' AND end with 'ng'. Examples: ring, rang, rung, spring (ends ng), sting, strong.</p>
+      <p><strong>Trailing ri*:</strong> Rotate to $ri*. Lookup <strong>$ri</strong> → all terms starting with 'ri'.</p>
+      <p><strong>Leading *ng:</strong> Rotate to ng$*. Lookup <strong>ng$</strong> → all terms ending with 'ng'.</p>
+      <p><strong>Space disadvantage:</strong> A term of length k generates k+1 rotations. Average English word ≈ 6 chars → 7 entries per word. The permuterm vocabulary is ~7–10x larger than the original vocabulary.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q3 — Edit Distance: Compute Levenshtein distance between 'grad' and 'greed'.</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Dynamic Programming Matrix</strong> (s1='grad' rows, s2='greed' cols):</p>
+      <pre>       ""   g   r   e   e   d
+  ""  [ 0   1   2   3   4   5 ]
+   g  [ 1   0   1   2   3   4 ]
+   r  [ 2   1   0   1   2   3 ]
+   a  [ 3   2   1   1   2   3 ]
+   d  [ 4   3   2   2   2   2 ]</pre>
+      <p><strong>Edit distance = 2.</strong></p>
+      <p>Optimal path: substitute 'a'→'e' (grad → gred, cost 1), then insert 'e' before 'd' (gred → greed, cost 1). Total: 2 operations.</p>
+      <p><strong>Should the system suggest 'greed'?</strong> Edit distance 2 is relatively high for a 4-letter word (50% of characters changed). Additional factors to consider:</p>
+      <ol>
+        <li><strong>Collection frequency:</strong> prefer more common terms — if 'greed' is much more frequent than 'grad', suggest it.</li>
+        <li><strong>Context:</strong> in an academic context, 'grad' (graduate) is likely the intended term.</li>
+        <li><strong>Mode:</strong> only suggest correction if 'grad' is not in the dictionary or returns 0 results.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q4 — Jaccard Coefficient: Compute for 'bord' vs. border, lord, morbid, sordid.</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p>Query q = 'bord'. Bigrams (A): <strong>bo, or, rd</strong> → |A| = 3.</p>
+      <table>
+        <tr><th>Term</th><th>Bigrams (B)</th><th>|B|</th><th>|A∩B|</th><th>Jaccard = |A∩B|/(|A|+|B|−|A∩B|)</th></tr>
+        <tr><td><strong>border</strong></td><td>bo,or,rd,de,er (+$b)</td><td>6</td><td>3 (bo,or,rd)</td><td>3/(3+6−3) = <strong>3/6 = 0.600</strong></td></tr>
+        <tr><td><strong>lord</strong></td><td>lo,or,rd</td><td>3</td><td>2 (or,rd)</td><td>2/(3+3−2) = <strong>2/4 = 0.500</strong></td></tr>
+        <tr><td><strong>sordid</strong></td><td>so,or,rd,di,id</td><td>5</td><td>2 (or,rd)</td><td>2/(3+5−2) = <strong>2/6 = 0.333</strong></td></tr>
+        <tr><td><strong>morbid</strong></td><td>mo,or,rb,bi,id</td><td>5</td><td>1 (or)</td><td>1/(3+5−1) = <strong>1/7 = 0.143</strong></td></tr>
+      </table>
+      <p><strong>Recommended correction: border</strong> (Jaccard = 0.6, highest; edit distance bord→border = 2 insertions).</p>
+      <p><strong>Why Jaccard over raw count?</strong> Raw count favors longer terms simply because they have more bigrams to match. Jaccard normalizes by the union size, penalizing terms with many extra bigrams that don't appear in the query — giving a fair comparison across terms of different lengths.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q5 — Soundex & Context-Sensitive Correction: Apply Soundex to Thompson vs. Thomson; explain top-10 pruning guarantee.</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Thompson:</strong> T · h→0,o→0,m→5,p→1,s→2,o→0,n→5 → digits: 0,0,5,1,2,0,5 → remove consec dups (00→0): 0,5,1,2,0,5 → remove 0s: 5,1,2,5 → <strong>T512</strong></p>
+      <p><strong>Thomson:</strong> T · h→0,o→0,m→5,s→2,o→0,n→5 → digits: 0,0,5,2,0,5 → remove 0s: 5,2,5 → <strong>T525</strong></p>
+      <p>Thompson (T512) ≠ Thomson (T525), yet they are pronounced nearly identically. This illustrates a key Soundex limitation: the omitted 'p' in Thomson causes a different digit sequence.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Is top-10 pruning guaranteed to find the globally best correction?</strong> <strong>No.</strong></p>
+      <p>The top-10 most common 2-term prefixes may NOT include the prefix that leads to one of the top-10 3-term phrases. Example: if the 2-term prefix 'cached in' is ranked 11th (just outside top-10) but 'cached in the rye' is the most common 3-term phrase, we would miss it — 'cached in' was pruned.</p>
+      <p>Top-10 pruning is a <strong>greedy heuristic</strong> that optimizes locally at each phase but provides no formal global guarantee. The true optimal algorithm would use <strong>beam search</strong> or <strong>A* search</strong> with a proper admissible heuristic. In practice, the heuristic works well because the most common 2-term prefixes are likely to extend to common 3-term phrases.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  body.classList.toggle('open');
+  chevron.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+const questions = [
+  {
+    q: "Which data structure supports prefix enumeration (e.g., finding all terms starting with 'automat') in O(log M) time?",
+    opts: ["Hash table", "B-tree", "Inverted index", "Linked list"],
+    ans: 1,
+    exp: "B-trees store terms in sorted lexicographic order, so all terms sharing a prefix form a contiguous range enumerable with a single traversal. Hash tables distribute keys uniformly — terms with a common prefix hash to unrelated locations."
+  },
+  {
+    q: "For the wildcard query X*Y, what prefix is looked up in the permuterm B-tree?",
+    opts: ["X$Y", "Y$X", "$XY", "XY$"],
+    ans: 1,
+    exp: "The rule is: rotate the query so * appears at the end → Y$X*. Then look up prefix Y$X. This retrieves all rotations (and thus original terms) that begin with Y, contain $, then X — i.e., terms starting with X and ending with Y."
+  },
+  {
+    q: "For the wildcard query red*, which 3-gram Boolean query is issued to the k-gram index?",
+    opts: ["red AND ed$", "$re AND red", "$re AND re AND ed", "re$ AND red"],
+    ans: 1,
+    exp: "The query red* means 'terms starting with red'. The boundary-inclusive 3-grams are $re (start marker + r + e) and red (r + e + d). Boolean query: $re AND red. Post-filtering then checks each candidate actually starts with 'red'."
+  },
+  {
+    q: "Why is post-filtering required after a k-gram Boolean query?",
+    opts: [
+      "To sort the results alphabetically",
+      "Because k-gram results may include false positives — terms containing all required k-grams but not matching the wildcard pattern",
+      "To compute edit distances",
+      "To merge multiple postings lists"
+    ],
+    ans: 1,
+    exp: "A term can contain all the required k-grams without matching the wildcard pattern. Example: 'retired' contains both $re and red as 3-grams but does NOT start with 'red'. Post-filtering string-matches each candidate against the original wildcard pattern."
+  },
+  {
+    q: "What is the time complexity of the Levenshtein edit distance dynamic programming algorithm?",
+    opts: ["O(|s1| + |s2|)", "O(|s1| × |s2|)", "O(|s1| log |s2|)", "O(max(|s1|, |s2|))"],
+    ans: 1,
+    exp: "The algorithm fills an (|s1|+1) × (|s2|+1) matrix where each cell costs O(1). Total: O(|s1| × |s2|). Space is also O(|s1| × |s2|), reducible to O(min(|s1|,|s2|)) with rolling arrays."
+  },
+  {
+    q: "The Jaccard coefficient between sets A and B is defined as:",
+    opts: ["|A ∩ B| / |A ∪ B|", "|A ∪ B| / |A ∩ B|", "|A ∩ B| / |A|", "|A ∩ B| / (|A| + |B|)"],
+    ans: 0,
+    exp: "Jaccard(A,B) = |A∩B| / |A∪B| = |A∩B| / (|A|+|B|−|A∩B|). Range: 0 (no overlap) to 1 (identical sets). It normalizes by the union size, penalizing terms with many extra k-grams."
+  },
+  {
+    q: "For the term 'ring', how many entries does the permuterm index generate?",
+    opts: ["4", "5", "6", "8"],
+    ans: 1,
+    exp: "The augmented term is ring$ (5 characters). All 5 rotations: ring$, ing$r, ng$ri, g$rin, $ring. Each rotation points back to 'ring'. A k-letter word generates k+1 rotations (one per character plus the $ symbol)."
+  },
+  {
+    q: "The permuterm index is approximately how much larger than the original vocabulary?",
+    opts: ["2x", "5x", "10x", "100x"],
+    ans: 2,
+    exp: "Each term of length k generates k+1 rotations. For an average English word of ~6 characters, this is 7 entries per word. The permuterm vocabulary is roughly 7–10x larger than the original vocabulary, which is significant for large dictionaries."
+  },
+  {
+    q: "Which spelling correction approach handles the query 'flew form Heathrow' (where 'form' is correctly spelled but semantically wrong)?",
+    opts: [
+      "Isolated-term correction",
+      "Context-sensitive correction",
+      "Soundex-based correction",
+      "Edit distance correction"
+    ],
+    ans: 1,
+    exp: "Isolated-term correction corrects each term independently — it cannot detect that 'form' is wrong because it IS a valid English word. Context-sensitive correction considers all terms together, evaluates 'flew from' as a common bigram, and selects the correction based on phrase frequency."
+  },
+  {
+    q: "What is the Soundex code for 'Knight'?",
+    opts: ["K530", "K523", "K253", "N253"],
+    ans: 1,
+    exp: "Knight: K retained. n→5, i→0 (vowel), g→2, h→0 (H maps to 0), t→3. Digits: 5,0,2,0,3. Remove 0s: 5,2,3. Result: K523."
+  },
+  {
+    q: "Why does Soundex fail for Tchaikovsky (T212) vs. Chaikovsky (C212) despite identical pronunciation?",
+    opts: [
+      "The algorithm ignores consonants",
+      "The first letter is always retained unchanged, so different starting letters always produce different codes",
+      "The vowel removal step is incorrect",
+      "Duplicate digit removal removes too many characters"
+    ],
+    ans: 1,
+    exp: "Soundex always retains the first letter of the word unchanged (Step 1). Tchaikovsky starts with T → T212; Chaikovsky starts with C → C212. Even though they are phonetically identical, the different first letters guarantee different Soundex codes. This is a fundamental limitation of the algorithm."
+  },
+  {
+    q: "In the k-gram index, why are postings stored in lexicographic order?",
+    opts: [
+      "To reduce storage space",
+      "To enable O(x+y) merge-intersection of multiple postings lists (two-pointer algorithm)",
+      "To speed up Soundex computation",
+      "To support range queries on document IDs"
+    ],
+    ans: 1,
+    exp: "Answering wildcard queries requires intersecting multiple k-gram postings lists. If both lists are sorted lexicographically, we can use the standard O(x+y) two-pointer merge-intersection algorithm. Without sorting, intersection would require O(x×y) comparisons."
+  },
+  {
+    q: "For the permuterm query s*ng, what is the lookup prefix in the B-tree?",
+    opts: ["$s*ng", "ng$s", "s$ng", "ng*s"],
+    ans: 1,
+    exp: "Wildcard query s*ng: rotate so * is at end → ng$s*. The prefix to look up is ng$s. All rotations in the B-tree beginning with ng$s correspond to original terms that start with 's' and end with 'ng'. Examples: sang, sing, song, swing, spring, string."
+  },
+  {
+    q: "In context-sensitive correction, if each of 4 misspelled query terms has 5 correction candidates, how many candidate phrases must be evaluated (without pruning)?",
+    opts: ["20", "625", "1024", "1296"],
+    ans: 3,
+    exp: "Each term has 5 corrections + the original = 6 variants. With 4 terms: 6 × 6 × 6 × 6 = 6⁴ = 1,296 candidate phrases. This combinatorial explosion is why top-k pruning (retaining only the top-10 most common prefixes at each step) is essential."
+  },
+  {
+    q: "What upper bound holds for the edit distance between strings s1 and s2?",
+    opts: [
+      "edit_distance ≤ |s1| + |s2|",
+      "edit_distance ≤ max(|s1|, |s2|)",
+      "edit_distance ≤ min(|s1|, |s2|)",
+      "edit_distance ≤ |s1| × |s2|"
+    ],
+    ans: 1,
+    exp: "Proof: WLOG |s1| ≥ |s2|. Substitute the first |s2| characters (cost ≤ |s2|) then delete the remaining |s1|−|s2| characters (cost |s1|−|s2|). Total ≤ |s2| + |s1|−|s2| = |s1| = max(|s1|,|s2|). Therefore edit_distance(s1,s2) ≤ max(|s1|,|s2|)."
+  }
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  score = 0; answered = 0;
+  updateScore();
+  const area = document.getElementById('quiz-area');
+  area.innerHTML = '';
+  questions.forEach((q, qi) => {
+    const letters = ['A','B','C','D'];
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;color:#888;flex-shrink:0">${letters[oi]}</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    area.innerHTML += `
+      <div class="q-card">
+        <div class="q-num">Question ${qi+1} / ${questions.length}</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}">${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(b => b.disabled = true);
+  const chosen = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) { chosen.classList.add('correct'); score++; }
+  else { chosen.classList.add('wrong'); correct.classList.add('correct'); }
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  answered++;
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('fill').style.width = pct + '%';
+  document.getElementById('sval').textContent = score + ' / ' + questions.length;
+}
+
+function resetQuiz() { buildQuiz(); }
+
+buildQuiz();
+</script>
+</body>
+</html>
