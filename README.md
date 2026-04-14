@@ -13,7 +13,7 @@ Interactive course notes and quiz system. All content is in English.
 | 3 | Dictionaries & Tolerant Retrieval | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch3.html) |
 | 4 | Index Construction | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch4.html) |
 | 5 | Index Compression | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch5.html) |
-| 6 | Scoring, TF-IDF & VSM | Coming Soon | — |
+| 6 | Scoring, TF-IDF & VSM | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch6.html) |
 
 ## Topics Covered
 
@@ -31,3 +31,6 @@ Hardware basics (seek time, transfer rate, RCV1 stats), BSBI (Blocked Sort-Based
 
 **Chapter 5 — Index Compression**
 Heaps' law (vocabulary growth), Zipf's law (term frequency distribution), lossless vs. lossy compression, dictionary compression (fixed-width, string, blocked storage, front coding), gap encoding, VB codes, γ codes, δ codes.
+
+**Chapter 6 — Scoring, TF-IDF & Vector Space Model**
+Parametric and zone indexes, weighted zone scoring, machine-learned relevance weights, tf-idf weighting, vector space model, cosine similarity, COSINESCORE algorithm, SMART notation, sublinear tf, pivoted document length normalization.

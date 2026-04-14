@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch6: Scoring, TF-IDF &amp; VSM</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.formula{background:#f8f8ff;border:1px solid #c7d2fe;border-radius:8px;padding:14px 20px;margin:14px 0;text-align:center;font-size:1.05rem;font-family:Georgia,serif}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .tab-btn{padding:12px 14px;font-size:.82rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Home</a>
+  <h1>Chapter 6: Scoring, TF-IDF &amp; Vector Space Model</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Lesson</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Classic Questions · 5</button>
+</div>
+
+<!-- ===================== LESSON ===================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 6.1 Zone Indexes -->
+  <div class="card">
+    <h2>6.1 Parametric and Zone Indexes</h2>
+    <p>Chapter 6 moves beyond Boolean retrieval to <strong>ranked retrieval</strong>: assigning a numeric score to each document and returning the top-k results. Documents contain two types of structured content:</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Fields (Parametric Index)</h4>
+        Short metadata: author, date, language. Supports equality queries (e.g., find all docs by a given author). Stored in a <strong>parametric index</strong>.
+      </div>
+      <div class="g-card">
+        <h4>Zones (Zone Index)</h4>
+        Arbitrary text regions: title, abstract, body. Each zone gets its own postings list, enabling zone-specific Boolean queries. Stored in a <strong>zone index</strong>.
+      </div>
+    </div>
+
+    <h3>Weighted Zone Scoring</h3>
+    <p>Assign a weight g<sub>i</sub> to each zone i (with Σg<sub>i</sub> = 1). Each zone contributes a Boolean score s<sub>i</sub> ∈ {0, 1} (does the doc match the query in that zone?). The overall document score is:</p>
+    <div class="formula">score(d) = Σ<sub>i</sub> g<sub>i</sub> · s<sub>i</sub></div>
+    <p>This is <strong>ranked Boolean retrieval</strong>, implemented by the <strong>ZONESCORE algorithm</strong> which walks through postings for the query term across all zones and accumulates weighted scores.</p>
+
+    <div class="info-box">
+      <strong>ZONESCORE Algorithm</strong>
+      For each query term t, retrieve postings for (t, zone_i) for every zone i. For each document in those postings, accumulate g<sub>i</sub> · s<sub>i</sub>. Return documents sorted by descending score.
+    </div>
+
+    <div class="warning-box">
+      <strong>Key constraint on zone weights:</strong> Different Boolean match functions can be used per zone (e.g., exact phrase match in title, stemmed match in body). The only requirement is s<sub>i</sub> ∈ {0,1} and Σg<sub>i</sub> = 1.
+    </div>
+
+    <h3>Machine-Learned Relevance Weights</h3>
+    <p>Instead of setting zone weights manually, learn them from <strong>training examples</strong> — (query, document, relevance) triples. For a two-zone system (title T, body B), the optimal weight g* that minimizes ranking errors is:</p>
+    <div class="formula">g* = (n<sub>10r</sub> + n<sub>01n</sub>) / (n<sub>10r</sub> + n<sub>01n</sub> + n<sub>10n</sub> + n<sub>01r</sub>)</div>
+
+    <table>
+      <tr><th>Notation</th><th>s<sub>T</sub></th><th>s<sub>B</sub></th><th>Relevant?</th><th>Meaning</th></tr>
+      <tr><td>n<sub>10r</sub></td><td>1</td><td>0</td><td>Yes</td><td>Title matched, doc relevant → title is a good signal</td></tr>
+      <tr><td>n<sub>01n</sub></td><td>0</td><td>1</td><td>No</td><td>Body matched, doc non-relevant → body is noisy</td></tr>
+      <tr><td>n<sub>10n</sub></td><td>1</td><td>0</td><td>No</td><td>Title matched, doc non-relevant → title false positive</td></tr>
+      <tr><td>n<sub>01r</sub></td><td>0</td><td>1</td><td>Yes</td><td>Body matched, doc relevant → body missed by title</td></tr>
+    </table>
+
+    <div class="info-box">
+      <strong>Why s<sub>T</sub> = s<sub>B</sub> cases are excluded:</strong> When both zones give the same score, score(d) = g·s + (1−g)·s = s regardless of g. These examples carry no information about the optimal g and are correctly excluded.
+    </div>
+  </div>
+
+  <!-- 6.2 TF-IDF -->
+  <div class="card card-teal">
+    <h2>6.2 Term Frequency and Weighting</h2>
+    <p>The <strong>bag-of-words model</strong> ignores word order and represents a document by its term frequencies. <strong>tf<sub>t,d</sub></strong> is the number of times term t appears in document d. High tf suggests relevance, but raw tf is not ideal — a document mentioning 'car' 10× is not 10× more relevant than one mentioning it once.</p>
+
+    <h3>Inverse Document Frequency (IDF)</h3>
+    <p>Rare terms are more informative than common ones. The IDF of term t is:</p>
+    <div class="formula">idf<sub>t</sub> = log(N / df<sub>t</sub>)</div>
+    <p>where N = total documents and df<sub>t</sub> = documents containing t.</p>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>idf = 0</h4>
+        Term appears in <em>every</em> document (df = N). Contributes nothing to ranking — same effect as stop word removal.
+      </div>
+      <div class="g-card">
+        <h4>idf = log N</h4>
+        Term appears in exactly <em>one</em> document (df = 1). Maximum discrimination.
+      </div>
+      <div class="g-card">
+        <h4>Always ≥ 0</h4>
+        df ≤ N → N/df ≥ 1 → log(N/df) ≥ 0. IDF is always non-negative and finite.
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Log base &amp; ranking:</strong> Changing the log base multiplies all idf values by a constant factor, so the <em>relative ranking of documents is unchanged</em>. Base 10, natural log, and base 2 are all equivalent for ranking. Base 2 gives an information-theoretic interpretation: idf = bits needed to identify which documents contain the term.
+    </div>
+
+    <h3>TF-IDF Weighting</h3>
+    <p>Combining tf and idf gives the tf-idf weight — highest for terms that appear many times in a document but are rare across the collection:</p>
+    <div class="formula">tf-idf<sub>t,d</sub> = tf<sub>t,d</sub> × idf<sub>t</sub></div>
+    <p>The score of query q against document d sums tf-idf weights over matching terms:</p>
+    <div class="formula">Score(q, d) = Σ<sub>t ∈ q ∩ d</sub> tf-idf<sub>t,d</sub></div>
+
+    <div class="warning-box">
+      <strong>Is tf-idf bounded by 1?</strong> No. Raw tf-idf is unbounded — tf=50 and idf=5 gives tf-idf=250. Only after cosine normalization are the vector components in [0, 1].
+    </div>
+
+    <h3>Example: IDF values (N = 1,000,000)</h3>
+    <table>
+      <tr><th>Term</th><th>df</th><th>idf = log<sub>10</sub>(1M/df)</th><th>Interpretation</th></tr>
+      <tr><td>car</td><td>18,165</td><td>≈ 1.74</td><td>Moderately rare</td></tr>
+      <tr><td>auto</td><td>6,723</td><td>≈ 2.17</td><td>Rarer than 'car'</td></tr>
+      <tr><td>insurance</td><td>19,241</td><td>≈ 1.72</td><td>Similar to 'car'</td></tr>
+      <tr><td>best</td><td>25,235</td><td>≈ 1.60</td><td>Most common of these four</td></tr>
+    </table>
+  </div>
+
+  <!-- 6.3 Vector Space Model -->
+  <div class="card card-purple">
+    <h2>6.3 The Vector Space Model</h2>
+    <p>Each document d is represented as a vector <strong>V(d) ∈ ℝ<sup>|V|</sup></strong>, where |V| is the vocabulary size and each dimension corresponds to a term. The weight of term t in document d is its tf-idf score. Queries are represented as vectors in the same space.</p>
+
+    <h3>Cosine Similarity</h3>
+    <p>Similarity is measured by the <strong>cosine of the angle</strong> between vectors:</p>
+    <div class="formula">sim(d<sub>1</sub>, d<sub>2</sub>) = V(d<sub>1</sub>) · V(d<sub>2</sub>) / (|V(d<sub>1</sub>)| × |V(d<sub>2</sub>)|)</div>
+    <p>The denominator <strong>length-normalizes</strong> both vectors by their Euclidean lengths: |V(d)| = √(Σ w<sub>i</sub><sup>2</sup>). After normalization, each vector lies on the unit hypersphere and similarity is just a dot product.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Why Length Normalization?</h4>
+        Without it, longer documents accumulate larger dot products simply by containing more terms. Normalization ensures similarity reflects topical relevance, not document length.
+      </div>
+      <div class="g-card">
+        <h4>Unit Vector Property</h4>
+        After normalization, Σ v<sub>i</sub><sup>2</sup> = 1 (sum of squares = 1). Cosine similarity ranges from −1 to 1; for tf-idf (non-negative weights), it ranges from 0 to 1.
+      </div>
+    </div>
+
+    <h3>Queries as Vectors</h3>
+    <p>A query q is treated as a short document and embedded in the same vector space. The score of a document d for query q is: <strong>score(q, d) = v(q) · v(d)</strong> (dot product of unit vectors).</p>
+
+    <div class="info-box">
+      <strong>Example 6.3 — Novels (SaS, PaP, WH) with terms affection/jealous/gossip:</strong>
+      <table style="margin:8px 0">
+        <tr><th>Novel</th><th>affection</th><th>jealous</th><th>gossip</th></tr>
+        <tr><td>SaS (Sense &amp; Sensibility)</td><td>0.996</td><td>0.003</td><td>0.001</td></tr>
+        <tr><td>PaP (Pride &amp; Prejudice)</td><td>0.993</td><td>0.006</td><td>0.001</td></tr>
+        <tr><td>WH (Wuthering Heights)</td><td>0.470</td><td>0.524</td><td>0.006</td></tr>
+      </table>
+      Query 'affection': SaS &gt; PaP &gt; WH. Query 'jealous gossip': WH &gt; PaP &gt; SaS — <em>exactly the reverse</em>.
+    </div>
+
+    <h3>COSINESCORE Algorithm</h3>
+    <pre><code>COSINESCORE(q):
+  A[d] = 0 for all d            // accumulator array, O(N)
+  for each term t in q:
+    fetch postings list for t
+    for each (d, tf_{t,d}) in postings:
+      A[d] += tf-idf_{t,d}      // accumulate, O(|q| · L_ave)
+  for each d with A[d] > 0:
+    A[d] /= |V(d)|              // cosine normalize
+  return top-k docs by A[d]</code></pre>
+
+    <div class="info-box">
+      <strong>Complexity: O(N + |q| · L<sub>ave</sub>)</strong>
+      Initialization: O(N). Postings traversal: O(Σ<sub>t∈q</sub> L<sub>t</sub>) ≈ O(|q| · L<sub>ave</sub>). Final normalization: O(N). Term-at-a-time strategy — contrast with document-at-a-time processing.
+    </div>
+
+    <h3>Cosine ↔ Euclidean Distance Equivalence</h3>
+    <p>For unit vectors (|q| = |d| = 1):</p>
+    <div class="formula">|q − d|<sup>2</sup> = |q|<sup>2</sup> − 2q·d + |d|<sup>2</sup> = 2(1 − cosθ)</div>
+    <p>Since √(2(1−x)) is strictly decreasing, <strong>minimizing Euclidean distance = maximizing cosine similarity</strong> for unit vectors.</p>
+  </div>
+
+  <!-- 6.4 Variant tf-idf -->
+  <div class="card card-amber">
+    <h2>6.4 Variant tf-idf Functions</h2>
+
+    <h3>Sublinear tf Scaling</h3>
+    <p>Raw tf grows linearly — too aggressive. Sublinear (log) tf dampens this growth:</p>
+    <div class="formula">wf<sub>t,d</sub> = 1 + log(tf<sub>t,d</sub>) &nbsp; if tf<sub>t,d</sub> &gt; 0, &nbsp; else 0</div>
+    <p>Doubling tf does not double relevance — the log function models <strong>diminishing returns</strong> for repeated occurrences.</p>
+
+    <h3>Maximum tf Normalization</h3>
+    <p>Normalize tf by the maximum tf in the document to reduce the effect of unusually long documents:</p>
+    <div class="formula">ntf<sub>t,d</sub> = a + (1 − a) × tf<sub>t,d</sub> / tf<sub>max</sub>(d)</div>
+    <p>Smoothing constant <strong>a ≈ 0.4</strong> prevents very low weights for less-frequent terms.</p>
+
+    <h3>SMART Notation (ddd.qqq)</h3>
+    <p>SMART notation compactly encodes a tf-idf scheme as <strong>ddd.qqq</strong> — three characters for document weighting, three for query weighting. Each character specifies: (1) tf method, (2) idf method, (3) normalization.</p>
+
+    <table>
+      <tr><th>Component</th><th>Code</th><th>Name</th><th>Formula</th></tr>
+      <tr><td>tf</td><td>n</td><td>Natural</td><td>raw tf count</td></tr>
+      <tr><td>tf</td><td>l</td><td>Logarithm</td><td>1 + log(tf) if tf&gt;0</td></tr>
+      <tr><td>tf</td><td>a</td><td>Augmented</td><td>0.5 + 0.5 × tf/tf<sub>max</sub></td></tr>
+      <tr><td>tf</td><td>b</td><td>Boolean</td><td>1 if tf&gt;0, else 0</td></tr>
+      <tr><td>idf</td><td>n</td><td>No idf</td><td>1</td></tr>
+      <tr><td>idf</td><td>t</td><td>idf</td><td>log(N/df)</td></tr>
+      <tr><td>idf</td><td>p</td><td>Prob. idf</td><td>max(0, log((N−df)/df))</td></tr>
+      <tr><td>norm</td><td>n</td><td>None</td><td>1</td></tr>
+      <tr><td>norm</td><td>c</td><td>Cosine</td><td>1 / √(Σ w<sub>i</sub><sup>2</sup>)</td></tr>
+      <tr><td>norm</td><td>u</td><td>Pivoted unique</td><td>1 / u (unique terms)</td></tr>
+    </table>
+
+    <div class="info-box">
+      <strong>Decoding 'lnc.ltc':</strong>
+      Documents: l=log tf, n=no idf, c=cosine normalization.
+      Query: l=log tf, t=standard idf, c=cosine normalization.
+      This is a common scheme that applies idf <em>only on the query side</em>.
+    </div>
+
+    <h3>Common SMART Schemes</h3>
+    <table>
+      <tr><th>Scheme</th><th>Document</th><th>Query</th><th>Use case</th></tr>
+      <tr><td><strong>lnc.ltc</strong></td><td>log-tf, cosine norm</td><td>log-tf, idf, cosine norm</td><td>Robust; idf on query only</td></tr>
+      <tr><td><strong>nnn.atc</strong></td><td>raw tf</td><td>aug-tf, idf, cosine norm</td><td>Fast doc storage; rich query</td></tr>
+      <tr><td><strong>ntc.atc</strong></td><td>tf-idf, cosine norm</td><td>aug-tf, idf, cosine norm</td><td>Balanced; good in practice</td></tr>
+      <tr><td><strong>ann.ann</strong></td><td>augmented tf</td><td>augmented tf</td><td>Normalizes via aug-tf</td></tr>
+    </table>
+
+    <h3>Pivoted Document Length Normalization</h3>
+    <p>Standard cosine normalization <strong>over-penalizes long documents</strong> and helps short ones. Empirically, there is a <strong>pivot</strong> length p where the true relevance probability intersects the cosine curve. Pivoted normalization rotates around this pivot:</p>
+    <div class="formula">Normalizer = a · |V(d)| + (1 − a) · piv</div>
+    <p>A practical approximation uses unique terms u<sub>d</sub>: <strong>a · u<sub>d</sub> + (1 − a) · piv</strong>. With slope a &lt; 1, the normalizer is smaller than Euclidean length for short documents (boosting them) and larger for long documents (less penalty than pure cosine). This corrects the bias.</p>
+
+    <h3>Algorithm Summary</h3>
+    <table>
+      <tr><th>Algorithm</th><th>Purpose</th><th>Complexity</th></tr>
+      <tr><td>ZONESCORE</td><td>Weighted zone scoring for Boolean zones</td><td>O(postings × zones)</td></tr>
+      <tr><td>COSINESCORE</td><td>tf-idf cosine ranked retrieval</td><td>O(N + |q| · L<sub>ave</sub>)</td></tr>
+      <tr><td>ML Weight Learning</td><td>Learn zone weights from training data</td><td>O(T · Z) training</td></tr>
+    </table>
+  </div>
+
+</div><!-- /container -->
+</div><!-- /lesson -->
+
+<!-- ===================== QUIZ ===================== -->
+<div id="quiz" class="section">
+<div class="container">
+
+  <div class="score-row">
+    <span class="score-label">Score</span>
+    <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+
+  <!-- Q1 -->
+  <div class="q-card">
+    <div class="q-num">Question 1</div>
+    <div class="q-text">In weighted zone scoring, what is the formula for a document's score given zone weights g<sub>i</sub> and Boolean zone scores s<sub>i</sub>?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> score(d) = max<sub>i</sub>(g<sub>i</sub> · s<sub>i</sub>)</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> score(d) = Σ<sub>i</sub> g<sub>i</sub> · s<sub>i</sub></button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> score(d) = Π<sub>i</sub> g<sub>i</sub> · s<sub>i</sub></button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> score(d) = Σ<sub>i</sub> g<sub>i</sub> / s<sub>i</sub></button>
+    </div>
+    <div class="explanation">score(d) = Σ g<sub>i</sub> · s<sub>i</sub> with constraints g<sub>i</sub> ≥ 0, Σg<sub>i</sub> = 1, and s<sub>i</sub> ∈ {0, 1}. This is a weighted sum of Boolean zone matches — zones with higher g<sub>i</sub> contribute more to the final score.</div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="q-card">
+    <div class="q-num">Question 2</div>
+    <div class="q-text">For a two-zone system with training data giving n<sub>10r</sub>=3, n<sub>01n</sub>=2, n<sub>10n</sub>=1, n<sub>01r</sub>=1, what is the optimal title zone weight g*?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 3/7 ≈ 0.43</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> 3/4 = 0.75</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> 5/7 ≈ 0.71</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 2/7 ≈ 0.29</button>
+    </div>
+    <div class="explanation">g* = (n<sub>10r</sub> + n<sub>01n</sub>) / (n<sub>10r</sub> + n<sub>01n</sub> + n<sub>10n</sub> + n<sub>01r</sub>) = (3+2)/(3+2+1+1) = 5/7 ≈ 0.714. The high value reflects that title matches are more reliable indicators of relevance in this training data.</div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="q-card">
+    <div class="q-num">Question 3</div>
+    <div class="q-text">Why are training examples where s<sub>T</sub> = s<sub>B</sub> excluded from the optimal zone weight formula?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> They are always non-relevant and would bias the result</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> They are too few to be statistically significant</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> When s<sub>T</sub> = s<sub>B</sub> = s, score = g·s + (1−g)·s = s regardless of g, so they carry no information about optimal g</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> They violate the constraint Σg<sub>i</sub> = 1</button>
+    </div>
+    <div class="explanation">When both zones give the same Boolean score s, the weighted zone score simplifies to s no matter what g is. Changing g cannot improve or worsen the ranking for these examples, so they are irrelevant to the optimization and correctly excluded.</div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="q-card">
+    <div class="q-num">Question 4</div>
+    <div class="q-text">What is the IDF of a term that appears in every document in the collection?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 1</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> log N</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> 0</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> N</button>
+    </div>
+    <div class="explanation">If df<sub>t</sub> = N (appears in every document), then idf<sub>t</sub> = log(N/N) = log(1) = 0. Multiplied by any tf, tf-idf = 0 — the term contributes nothing to ranking. This is the same effect as automatic stop word removal.</div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="q-card">
+    <div class="q-num">Question 5</div>
+    <div class="q-text">How does changing the logarithm base (e.g., from base 10 to natural log) affect document ranking with tf-idf?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> It changes which document ranks highest for queries with rare terms</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> It doubles all idf values, causing ties to be broken differently</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> It multiplies all idf values by a constant factor, leaving the relative ranking unchanged</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> It has no effect on tf-idf at all since idf is log-independent</button>
+    </div>
+    <div class="explanation">log<sub>b2</sub>(N/df) = log<sub>b1</sub>(N/df) / log<sub>b1</sub>(b2). All idf values are scaled by the same constant factor. Since ranking is based on relative ordering of scores, the ranking is identical regardless of base.</div>
+  </div>
+
+  <!-- Q6 -->
+  <div class="q-card">
+    <div class="q-num">Question 6</div>
+    <div class="q-text">In the vector space model, what does Euclidean length normalization accomplish?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> It ensures all tf-idf values are between 0 and 1</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> It converts document vectors to unit vectors so similarity reflects topical relevance rather than document length</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> It removes stop words from the document representation</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> It maps all documents to the same length in the vocabulary space</button>
+    </div>
+    <div class="explanation">Without normalization, longer documents accumulate larger dot products simply by containing more terms. Dividing by |V(d)| = √(Σ w<sub>i</sub><sup>2</sup>) converts vectors to unit vectors so that similarity measures direction (topic), not magnitude (length).</div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="q-card">
+    <div class="q-num">Question 7</div>
+    <div class="q-text">What is the time complexity of the COSINESCORE algorithm?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> O(N × |q|)</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> O(|V| × L<sub>ave</sub>)</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> O(N + |q| · L<sub>ave</sub>)</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> O(N log N)</button>
+    </div>
+    <div class="explanation">Accumulator initialization: O(N). Postings traversal for |q| terms of average length L<sub>ave</sub>: O(|q| · L<sub>ave</sub>). Final normalization sweep: O(N). Total: O(N + |q| · L<sub>ave</sub>).</div>
+  </div>
+
+  <!-- Q8 -->
+  <div class="q-card">
+    <div class="q-num">Question 8</div>
+    <div class="q-text">For unit vectors, what is the relationship between cosine similarity and Euclidean distance?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> They are equal: cos(θ) = |q − d|</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> They are unrelated for unit vectors</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> |q − d|² = 2(1 − cosθ), so maximizing cosine similarity = minimizing Euclidean distance</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> |q − d| = cosθ only when both vectors are positive</button>
+    </div>
+    <div class="explanation">|q−d|² = |q|²−2q·d+|d|² = 1−2cosθ+1 = 2(1−cosθ). Since √(2(1−x)) is strictly decreasing, minimizing |q−d| is equivalent to maximizing cosθ. Both rankings are identical for unit vectors.</div>
+  </div>
+
+  <!-- Q9 -->
+  <div class="q-card">
+    <div class="q-num">Question 9</div>
+    <div class="q-text">What does sublinear tf scaling wf<sub>t,d</sub> = 1 + log(tf<sub>t,d</sub>) address?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> The problem of rare terms having idf = 0</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> The unrealistic linear assumption that doubling term frequency doubles document relevance</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> The problem of long documents having too many unique terms</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> The need to normalize tf values to [0, 1]</button>
+    </div>
+    <div class="explanation">Raw tf grows linearly, but relevance exhibits diminishing returns — a document mentioning 'car' 10 times is not 10× more relevant than one mentioning it once. The log function grows sublinearly (e.g., log(10) ≈ 2.3, not 10), better modeling this relationship.</div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="q-card">
+    <div class="q-num">Question 10</div>
+    <div class="q-text">In SMART notation, what does the scheme 'lnc.ltc' mean?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> Documents: log tf, idf, cosine; Query: log tf, no idf, cosine</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> Documents: log tf, no idf, cosine; Query: log tf, idf, cosine</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> Documents: log tf, no idf, no norm; Query: log tf, idf, cosine</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> Documents: natural tf, idf, cosine; Query: log tf, idf, cosine</button>
+    </div>
+    <div class="explanation">SMART is ddd.qqq. 'lnc': l=log tf, n=no idf, c=cosine normalization (for documents). 'ltc': l=log tf, t=standard idf, c=cosine normalization (for query). A common scheme that applies idf only on the query side.</div>
+  </div>
+
+  <!-- Q11 -->
+  <div class="q-card">
+    <div class="q-num">Question 11</div>
+    <div class="q-text">What is the augmented tf formula (SMART code 'a') and what problem does it solve?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 1 + log(tf); solves the problem of zero tf values</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> 0.5 + 0.5 × tf/tf<sub>max</sub>(d); normalizes tf relative to the most frequent term in the document</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> tf / N; normalizes tf by total collection size</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> tf × idf / tf<sub>max</sub>; combines tf-idf with max normalization</button>
+    </div>
+    <div class="explanation">Augmented tf: ntf = a + (1−a) × tf/tf<sub>max</sub>(d), with a ≈ 0.4 (smoothing constant). It normalizes tf relative to the most frequent term in the document, reducing the effect of unusually long documents while the smoothing constant prevents very low weights for rare terms.</div>
+  </div>
+
+  <!-- Q12 -->
+  <div class="q-card">
+    <div class="q-num">Question 12</div>
+    <div class="q-text">What problem does pivoted document length normalization solve that standard cosine normalization does not?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> It handles out-of-vocabulary query terms</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> It makes idf values independent of collection size</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> Standard cosine over-penalizes long documents; pivoted normalization rotates around a pivot length to better match true relevance probability</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> It prevents tf-idf from exceeding 1 for any term</button>
+    </div>
+    <div class="explanation">Empirically, there is a pivot document length p where the true relevance probability intersects the cosine normalization curve. Pivoted normalization uses Normalizer = a·|V(d)| + (1−a)·piv (a &lt; 1), which is smaller than Euclidean length for short docs (boosting them) and larger for long docs (less penalty).</div>
+  </div>
+
+  <!-- Q13 -->
+  <div class="q-card">
+    <div class="q-num">Question 13</div>
+    <div class="q-text">After stemming 'jealous' and 'jealousy' to the same stem, what happens to the combined term's idf compared to each individual term's idf?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> idf increases because the term is now rarer</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> idf decreases because df increases (the union of document sets is larger)</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> idf stays the same since the underlying concept hasn't changed</td></tr>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> idf becomes undefined since the stemmed form may not exist in the collection</button>
+    </div>
+    <div class="explanation">The new df = |{d : 'jealous'∈d} ∪ {d : 'jealousy'∈d}| ≥ max(df('jealous'), df('jealousy')). Since df increases, idf = log(N/df) decreases. However, tf also increases (adding both forms' frequencies), so the net effect on tf-idf depends on which change dominates.</div>
+  </div>
+
+  <!-- Q14 -->
+  <div class="q-card">
+    <div class="q-num">Question 14</div>
+    <div class="q-text">In the ntc.atc scoring scheme, what do the document and query sides use?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> Document: log tf, cosine norm; Query: natural tf, idf, cosine norm</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> Document: augmented tf, idf, cosine norm; Query: natural tf, idf, cosine norm</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> Document: natural tf × idf, cosine norm; Query: augmented tf, idf, cosine norm</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> Document: natural tf, cosine norm; Query: augmented tf, no idf, cosine norm</button>
+    </div>
+    <div class="explanation">ntc = natural tf (n), standard idf (t), cosine normalization (c) for documents. atc = augmented tf (a), standard idf (t), cosine normalization (c) for queries. This balanced scheme is considered good in practice — it applies tf-idf to documents and smoothed augmented tf-idf to queries.</div>
+  </div>
+
+  <!-- Q15 -->
+  <div class="q-card">
+    <div class="q-num">Question 15</div>
+    <div class="q-text">How are out-of-vocabulary (OOV) query terms handled in the standard vector space model?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,true)"><span>A.</span> OOV terms are dropped from the query; the query vector only has components for indexed terms</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> OOV terms get idf = log(N+1) and contribute positively to all documents</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> OOV terms cause the entire query to return no results</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> OOV terms are replaced with the most similar in-vocabulary term automatically</button>
+    </div>
+    <div class="explanation">The standard approach is to ignore OOV terms — the query vector has zero components for terms not in the index. For an OOV term with df=0, even if we assign a high idf, no document contains it (d<sub>t</sub>=0 for all d), so its contribution to scores is 0 regardless. The remaining terms determine the ranking.</div>
+  </div>
+
+  <button class="reset-btn" onclick="resetQuiz()">Reset Quiz</button>
+
+</div>
+</div>
+
+<!-- ===================== CLASSIC ===================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <!-- C1 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>1. Weighted Zone Scoring: Distinct Scores &amp; Optimal Weight</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> A three-zone system has weights g<sub>1</sub>=0.20, g<sub>2</sub>=0.31, g<sub>3</sub>=0.49. (a) How many distinct score values can a document achieve? (b) Using the training data n<sub>10r</sub>=3, n<sub>01n</sub>=2, n<sub>10n</sub>=1, n<sub>01r</sub>=1 (title vs. body, two-zone system), compute the optimal title weight g*.</p>
+      <p><strong>Part (a) — Distinct scores:</strong></p>
+      <p>With 3 binary zone scores (each ∈ {0,1}), there are 2<sup>3</sup> = 8 possible combinations:</p>
+      <table>
+        <tr><th>s<sub>1</sub></th><th>s<sub>2</sub></th><th>s<sub>3</sub></th><th>Score = 0.20s<sub>1</sub> + 0.31s<sub>2</sub> + 0.49s<sub>3</sub></th></tr>
+        <tr><td>0</td><td>0</td><td>0</td><td>0.00</td></tr>
+        <tr><td>1</td><td>0</td><td>0</td><td>0.20</td></tr>
+        <tr><td>0</td><td>1</td><td>0</td><td>0.31</td></tr>
+        <tr><td>0</td><td>0</td><td>1</td><td>0.49</td></tr>
+        <tr><td>1</td><td>1</td><td>0</td><td>0.51</td></tr>
+        <tr><td>1</td><td>0</td><td>1</td><td>0.69</td></tr>
+        <tr><td>0</td><td>1</td><td>1</td><td>0.80</td></tr>
+        <tr><td>1</td><td>1</td><td>1</td><td>1.00</td></tr>
+      </table>
+      <p>All 8 combinations produce <strong>distinct scores</strong> (no two subsets of {0.20, 0.31, 0.49} have the same sum) → <strong>8 distinct score values</strong>.</p>
+      <p><strong>Part (b) — Optimal weight g*:</strong></p>
+      <p>Formula: g* = (n<sub>10r</sub> + n<sub>01n</sub>) / (n<sub>10r</sub> + n<sub>01n</sub> + n<sub>10n</sub> + n<sub>01r</sub>)</p>
+      <p>= (3 + 2) / (3 + 2 + 1 + 1) = <strong>5/7 ≈ 0.714</strong></p>
+      <p>Body weight = 1 − 5/7 = 2/7 ≈ 0.286. The high title weight reflects that in this training data, title matches are more reliable indicators of relevance.</p>
+    </div>
+  </div>
+
+  <!-- C2 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>2. TF-IDF Computation and Cosine Similarity</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> Compute the cosine similarity for query q = 'digital cameras' against document d = 'digital cameras and video cameras' (N=1,000,000, treat 'and' as stop word). Use log tf for both sides, idf for query only, cosine normalization for document only.</p>
+      <p><strong>Step 1 — After removing stop word 'and':</strong> terms are <em>digital</em>, <em>cameras</em>, <em>video</em>.</p>
+      <p><strong>Step 2 — IDF values:</strong></p>
+      <table>
+        <tr><th>Term</th><th>df</th><th>idf = log<sub>10</sub>(1M/df)</th></tr>
+        <tr><td>digital</td><td>10,000</td><td>log(100) = 2.00 → actually log(1M/10K) = log(100) ≈ 2.00</td></tr>
+        <tr><td>cameras</td><td>50,000</td><td>log(20) ≈ 1.30</td></tr>
+        <tr><td>video</td><td>100,000</td><td>log(10) = 1.00</td></tr>
+      </table>
+      <p><strong>Step 3 — Query weights</strong> (log tf × idf; query tf=1 for digital and cameras, 0 for video):</p>
+      <ul>
+        <li>q<sub>digital</sub> = (1+log 1) × 2.00 = 1.0 × 2.00 = 2.00</li>
+        <li>q<sub>cameras</sub> = (1+log 1) × 1.30 = 1.0 × 1.30 = 1.30</li>
+        <li>q<sub>video</sub> = 0 (not in query)</li>
+      </ul>
+      <p><strong>Step 4 — Document weights</strong> (log tf only; tf: digital=1, cameras=2, video=1):</p>
+      <ul>
+        <li>d<sub>digital</sub> = 1 + log(1) = 1.00</li>
+        <li>d<sub>cameras</sub> = 1 + log(2) ≈ 1.30</li>
+        <li>d<sub>video</sub> = 1 + log(1) = 1.00</li>
+      </ul>
+      <p><strong>Step 5 — Document cosine normalization:</strong></p>
+      <p>|d| = √(1.00² + 1.30² + 1.00²) = √(1 + 1.69 + 1) = √3.69 ≈ 1.921</p>
+      <p>Normalized: d<sub>digital</sub>=0.521, d<sub>cameras</sub>=0.677, d<sub>video</sub>=0.521</p>
+      <p><strong>Step 6 — Final score:</strong></p>
+      <p>score = Σ q<sub>i</sub> · d<sub>i</sub> = 2.00×0.521 + 1.30×0.677 + 0×0.521 = 1.042 + 0.880 + 0 ≈ <strong>1.92</strong></p>
+    </div>
+  </div>
+
+  <!-- C3 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>3. Cosine Similarity: Novels Example &amp; Reversed Ranking</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> Using the normalized document vectors below, show that the ranking for query 'affection' is exactly the reverse of the ranking for query 'jealous gossip'.</p>
+      <table>
+        <tr><th>Novel</th><th>affection</th><th>jealous</th><th>gossip</th></tr>
+        <tr><td>SaS (Sense &amp; Sensibility)</td><td>0.996</td><td>0.003</td><td>0.001</td></tr>
+        <tr><td>PaP (Pride &amp; Prejudice)</td><td>0.993</td><td>0.006</td><td>0.001</td></tr>
+        <tr><td>WH (Wuthering Heights)</td><td>0.470</td><td>0.524</td><td>0.006</td></tr>
+      </table>
+      <p><strong>Query 'affection':</strong></p>
+      <p>Query vector (unit vector) = (1, 0, 0). Score = affection component only:</p>
+      <ul>
+        <li>score(SaS) = 0.996</li>
+        <li>score(PaP) = 0.993</li>
+        <li>score(WH) = 0.470</li>
+      </ul>
+      <p><strong>Order: SaS &gt; PaP &gt; WH</strong></p>
+      <p><strong>Query 'jealous gossip':</strong></p>
+      <p>Raw query vector = (0, 1, 1). Normalized: |q| = √(0+1+1) = √2. v(q) = (0, 1/√2, 1/√2) ≈ (0, 0.707, 0.707).</p>
+      <ul>
+        <li>score(SaS) = 0.707×0.003 + 0.707×0.001 = 0.002 + 0.001 = 0.003</li>
+        <li>score(PaP) = 0.707×0.006 + 0.707×0.001 = 0.004 + 0.001 = 0.005</li>
+        <li>score(WH) = 0.707×0.524 + 0.707×0.006 = 0.370 + 0.004 = 0.374</li>
+      </ul>
+      <p><strong>Order: WH &gt; PaP &gt; SaS — exactly the reverse. ■</strong></p>
+      <p>This demonstrates that the vector space model correctly captures the thematic difference between romance novels (SaS, PaP — affection-focused) and gothic novels (WH — jealousy-focused).</p>
+    </div>
+  </div>
+
+  <!-- C4 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>4. SMART Notation: Decode &amp; Compare Schemes</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> (a) Decode the SMART scheme 'ntc.atc'. (b) For query 'best car insurance' (N=1M, df: best=25,235, car=18,165, insurance=19,241), compute the normalized query vector under the 'atc' query scheme.</p>
+      <p><strong>Part (a) — Decoding 'ntc.atc':</strong></p>
+      <table>
+        <tr><th>Side</th><th>Code</th><th>tf method</th><th>idf method</th><th>normalization</th></tr>
+        <tr><td>Document</td><td>ntc</td><td>n = natural (raw tf)</td><td>t = log(N/df)</td><td>c = cosine (1/√Σw²)</td></tr>
+        <tr><td>Query</td><td>atc</td><td>a = 0.5 + 0.5×tf/tf<sub>max</sub></td><td>t = log(N/df)</td><td>c = cosine</td></tr>
+      </table>
+      <p><strong>Part (b) — Query vector under 'atc':</strong></p>
+      <p>Query 'best car insurance': each term appears once (tf=1), tf<sub>max</sub>=1, so augmented tf = 0.5 + 0.5×(1/1) = 1.0 for all terms.</p>
+      <p>IDF values (log<sub>10</sub>):</p>
+      <ul>
+        <li>idf(best) = log<sub>10</sub>(1,000,000/25,235) ≈ log(39.63) ≈ 1.60</li>
+        <li>idf(car) = log<sub>10</sub>(1,000,000/18,165) ≈ log(55.04) ≈ 1.74</li>
+        <li>idf(insurance) = log<sub>10</sub>(1,000,000/19,241) ≈ log(51.97) ≈ 1.72</li>
+      </ul>
+      <p>Raw query weights: best=1.0×1.60=1.60, car=1.0×1.74=1.74, insurance=1.0×1.72=1.72</p>
+      <p>Query Euclidean length: |q| = √(1.60² + 1.74² + 1.72²) = √(2.56 + 3.03 + 2.96) = √8.55 ≈ 2.924</p>
+      <p>Normalized query vector: v(q) = (1.60/2.924, 1.74/2.924, 1.72/2.924) = <strong>(0.547, 0.595, 0.588)</strong></p>
+      <p>Scoring a document d: score = 0.547×v<sub>ntc</sub>(best,d) + 0.595×v<sub>ntc</sub>(car,d) + 0.588×v<sub>ntc</sub>(insurance,d). Documents with high cosine-normalized tf-idf weights for all three terms rank highest.</p>
+    </div>
+  </div>
+
+  <!-- C5 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>5. Pivoted Normalization vs. Cosine &amp; OOV Terms</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> (a) Explain why standard cosine normalization has a bias against long documents, and how pivoted normalization corrects it. (b) How are out-of-vocabulary terms handled in 'ntc.atc' scoring for query 'coyote insurance', where 'coyote' never appears in the collection?</p>
+      <p><strong>Part (a) — Cosine bias and pivoted correction:</strong></p>
+      <p><strong>The bias:</strong> Standard cosine normalization divides by |V(d)| = √(Σw<sub>i</sub><sup>2</sup>), the Euclidean length. Empirically, longer documents tend to have larger Euclidean lengths, so they are penalized more heavily. This causes a <em>short-document bias</em> — short documents get artificially boosted even when long documents are genuinely more relevant.</p>
+      <p><strong>The pivot:</strong> Plotting the probability of relevance against document length, there is a pivot point p where the cosine normalization curve intersects the true relevance curve. Documents shorter than p are over-rewarded by cosine; longer documents are over-penalized.</p>
+      <p><strong>Pivoted normalization</strong> uses: Normalizer = a · u<sub>d</sub> + (1−a) · piv, where u<sub>d</sub> = unique terms in d, a &lt; 1, piv = pivot value (average unique terms across the collection). This "rotates" the normalization curve around the pivot:</p>
+      <ul>
+        <li>For short documents (u<sub>d</sub> &lt; piv): normalizer &lt; Euclidean length → score boosted vs. pure cosine</li>
+        <li>For long documents (u<sub>d</sub> &gt; piv): normalizer &gt; piv but &lt; Euclidean length → less penalized vs. pure cosine</li>
+      </ul>
+      <p><strong>Part (b) — OOV term 'coyote' in 'ntc.atc':</strong></p>
+      <p>'Coyote' has df=0 → idf = log(N/0) is undefined. Standard approach: <strong>drop OOV terms</strong>.</p>
+      <p>Query becomes effectively 'insurance' only. Under 'atc': augmented tf = 1.0 (tf=1, tf_max=1), idf(insurance) = log(N/df_insurance) ≈ 1.72. Normalized query weight = 1.0×1.72/1.72 = 1.0 (trivially).</p>
+      <p>For document weights (ntc): v<sub>insurance,d</sub> = tf(insurance,d) × idf(insurance) / |V(d)|. The ranking reduces to ranking documents by their cosine-normalized insurance tf-idf weight.</p>
+      <p><em>Why does 'coyote' contribute nothing?</em> Even if we assign a large idf to 'coyote', every document has tf(coyote,d)=0, so tf-idf(coyote,d)=0 for all d. The 'coyote' component of the dot product is q<sub>coyote</sub>×0=0 regardless of the query weight assigned.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div style="text-align:center;color:#888;font-size:.82rem;padding:32px 0">
+  CSE 422 · Acibadem University · Manning et al. — Introduction to Information Retrieval
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+let score = 0, answered = 0;
+const total = 15;
+
+function answer(btn, correct) {
+  const opts = btn.closest('.options').querySelectorAll('.option');
+  if (btn.disabled) return;
+  opts.forEach(o => o.disabled = true);
+  if (correct) {
+    btn.classList.add('correct');
+    score++;
+  } else {
+    btn.classList.add('wrong');
+    opts.forEach(o => { if (o.onclick.toString().includes('true')) o.classList.add('correct'); });
+  }
+  btn.closest('.q-card').querySelector('.explanation').classList.add('show');
+  answered++;
+  document.getElementById('scoreVal').textContent = score + ' / ' + total;
+  document.getElementById('scoreFill').style.width = (score / total * 100) + '%';
+}
+
+function resetQuiz() {
+  score = 0; answered = 0;
+  document.getElementById('scoreVal').textContent = '0 / ' + total;
+  document.getElementById('scoreFill').style.width = '0%';
+  document.querySelectorAll('.option').forEach(o => {
+    o.disabled = false;
+    o.classList.remove('correct', 'wrong');
+  });
+  document.querySelectorAll('.explanation').forEach(e => e.classList.remove('show'));
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
+</script>
+</body>
+</html>
