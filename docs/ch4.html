@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch4: Index Construction</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:90px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 14px;font-size:.82rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Home</a>
+  <h1>Chapter 4: Index Construction</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Lesson</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Classic Questions · 5</button>
+</div>
+
+<!-- ===================== LESSON ===================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 4.1 Hardware -->
+  <div class="card">
+    <h2>4.1 Hardware Basics</h2>
+    <p>All index construction decisions are shaped by hardware constraints — particularly the gap between memory speed and disk speed. The Reuters-RCV1 collection (~800K docs, 100M tokens) requires <strong>0.8 GB</strong> just for termID–docID pairs, making in-memory sorting impossible for large collections.</p>
+
+    <table>
+      <tr><th>Symbol</th><th>Parameter</th><th>Value</th></tr>
+      <tr><td><strong>s</strong></td><td>Average disk seek time</td><td>5 ms = 5×10<sup>−3</sup> s</td></tr>
+      <tr><td><strong>b</strong></td><td>Transfer time per byte</td><td>0.02 µs = 2×10<sup>−8</sup> s/byte</td></tr>
+      <tr><td><strong>p</strong></td><td>Low-level CPU operation</td><td>0.01 µs = 10<sup>−8</sup> s</td></tr>
+      <tr><td>—</td><td>Processor clock rate</td><td>10<sup>9</sup> s<sup>−1</sup></td></tr>
+      <tr><td>—</td><td>Main memory</td><td>Several GB</td></tr>
+      <tr><td>—</td><td>Disk space</td><td>1 TB or more</td></tr>
+    </table>
+
+    <h3>Key Hardware Principles</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Seek Time Dominates</h4>
+        Moving the disk head averages 5 ms. Reading 10 MB as <strong>one contiguous chunk</strong>: 1 seek + transfer = 0.005 + 0.2 = <strong>0.205 s</strong>. Reading the same 10 MB in <strong>100 non-contiguous chunks</strong>: 100 seeks + transfer = 0.5 + 0.2 = <strong>0.7 s</strong> (~3.4× slower).
+      </div>
+      <div class="g-card">
+        <h4>Block-Level I/O</h4>
+        OS reads/writes entire blocks (8–64 KB). Reading one byte costs as much as a full block. Use a <strong>buffer</strong> — a region of main memory holding a block being read/written. Data transfers run via the system bus (not CPU), so they can overlap with computation.
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Compression Pays Off</strong>
+      Storing compressed data on disk is often faster overall because transfer time (b) is the bottleneck, not decompression CPU cost. Compressed transfers + fast decompression beats uncompressed transfers.
+    </div>
+
+    <h3>Reuters-RCV1 Collection</h3>
+    <table>
+      <tr><th>Symbol</th><th>Statistic</th><th>Value</th></tr>
+      <tr><td>N</td><td>Documents</td><td>800,000</td></tr>
+      <tr><td>L<sub>ave</sub></td><td>Avg. tokens per document</td><td>200</td></tr>
+      <tr><td>M</td><td>Distinct terms</td><td>400,000</td></tr>
+      <tr><td>T</td><td>Total tokens</td><td>100,000,000</td></tr>
+      <tr><td>—</td><td>termID–docID pairs (8 bytes each)</td><td>0.8 GB</td></tr>
+    </table>
+  </div>
+
+  <!-- 4.2 BSBI -->
+  <div class="card card-teal">
+    <h2>4.2 Blocked Sort-Based Indexing (BSBI)</h2>
+    <p>BSBI segments the collection into <strong>blocks of equal size</strong>, sorts each block in memory, writes it to disk, then merges all blocks into a final index. Terms are represented as <strong>termIDs</strong> (integers) to save memory.</p>
+
+    <h3>BSBI Algorithm Steps</h3>
+    <table>
+      <tr><th>Step</th><th>Action</th></tr>
+      <tr><td><strong>1</strong></td><td>Initialize block counter n = 0</td></tr>
+      <tr><td><strong>2–3</strong></td><td>While unprocessed documents exist, increment n</td></tr>
+      <tr><td><strong>4</strong></td><td><span class="inline-code">PARSENEXTBLOCK()</span>: parse documents into (termID, docID) pairs until block is full</td></tr>
+      <tr><td><strong>5</strong></td><td><span class="inline-code">BSBI-INVERT(block)</span>: (i) sort pairs by termID then docID; (ii) group docIDs per termID into postings lists — this is <strong>inversion</strong></td></tr>
+      <tr><td><strong>6</strong></td><td><span class="inline-code">WRITEBLOCKTODISK(block, f_n)</span>: write inverted block to disk file f_n</td></tr>
+      <tr><td><strong>7</strong></td><td><span class="inline-code">MERGEBLOCKS(f_1,...,f_n; f_merged)</span>: simultaneously merge all block files using a priority queue (min-heap)</td></tr>
+    </table>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Inversion</h4>
+        Two steps: (1) sort all (termID, docID) pairs by termID then docID; (2) collect all docIDs per termID into a postings list.
+      </div>
+      <div class="g-card">
+        <h4>Merging</h4>
+        All block files opened simultaneously. A <strong>min-heap</strong> always selects the globally smallest termID. All postings for that termID are merged and written to the final index file.
+      </div>
+      <div class="g-card">
+        <h4>Reuters-RCV1</h4>
+        10M pairs per block → 10 blocks. Each block = 80 MB. Total construction ≈ 100 s.
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Time Complexity: O(T log T)</strong> — sorting T termID–docID pairs dominates. In practice, PARSENEXTBLOCK (text parsing + I/O) and MERGEBLOCKS (sequential disk reads) are the dominant costs, not the in-memory sorts.
+    </div>
+  </div>
+
+  <!-- 4.3 SPIMI -->
+  <div class="card card-purple">
+    <h2>4.3 Single-Pass In-Memory Indexing (SPIMI)</h2>
+    <p>BSBI requires a global term-to-termID mapping which may not fit in memory for very large collections. SPIMI eliminates this by using <strong>terms directly</strong> instead of termIDs.</p>
+
+    <h3>Key SPIMI Innovations</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>1 — No TermID Mapping</h4>
+        Terms stored directly in a hash-based dictionary. No global term-to-ID table required → blocks can be much larger.
+      </div>
+      <div class="g-card">
+        <h4>2 — Dynamic Postings Lists</h4>
+        Each posting is added directly to the term's postings list as tokens arrive. When a list fills up, it is <strong>doubled</strong> in size. No sorting of pairs needed.
+      </div>
+    </div>
+
+    <h3>SPIMI-INVERT (per block)</h3>
+    <pre><code>for each token (term, docID):
+  if term not in dictionary:
+    dictionary[term] = new postings list    # line 6
+  else:
+    postings = get_postings(term)          # line 7
+  if postings list is full:
+    postings = double_list(postings)       # lines 8-9
+  append docID to postings                 # line 10
+sort(dictionary.keys())                    # line 11 — only terms, not pairs
+write block to disk                        # line 12</code></pre>
+
+    <div class="info-box">
+      <strong>Time Complexity: O(T)</strong> — each token processed in O(1) amortized time (postings list doubling). Only the terms are sorted before writing (O(M<sub>block</sub> log M<sub>block</sub>) where M<sub>block</sub> ≪ T). Compression of both postings and dictionary is built-in.
+    </div>
+
+    <h3>BSBI vs. SPIMI Comparison</h3>
+    <table>
+      <tr><th>Feature</th><th>BSBI</th><th>SPIMI</th></tr>
+      <tr><td>Dictionary representation</td><td>TermIDs (integers)</td><td>Terms (strings)</td></tr>
+      <tr><td>Memory for term mapping</td><td>Required (can be large)</td><td>Not required</td></tr>
+      <tr><td>Posting collection</td><td>Sort all pairs then group</td><td>Direct to postings list</td></tr>
+      <tr><td>In-block sorting</td><td>Sort termID–docID pairs</td><td>Sort terms only</td></tr>
+      <tr><td>Time complexity</td><td>O(T log T)</td><td>O(T)</td></tr>
+      <tr><td>Compression</td><td>Not discussed</td><td>Built-in</td></tr>
+      <tr><td>Block size</td><td>Limited by mapping memory</td><td>Larger (no mapping overhead)</td></tr>
+    </table>
+  </div>
+
+  <!-- 4.4 MapReduce -->
+  <div class="card card-amber">
+    <h2>4.4 Distributed Indexing with MapReduce</h2>
+    <p>For web-scale collections, index construction must be distributed across clusters. <strong>MapReduce</strong> is a general distributed computing architecture for large clusters of commodity machines. Key fault-tolerance idea: any machine can fail; the <strong>master node</strong> reassigns its work automatically.</p>
+
+    <div class="flow">
+      <div class="flow-box">Web Collection<br><small>(input)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Splits<br><small>16–64 MB chunks</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Parsers<br><small>map phase</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Segment Files<br><small>j per parser</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Inverters<br><small>reduce phase</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Final Index</div>
+    </div>
+
+    <h3>Map Phase — Parsers</h3>
+    <p>Each <strong>parser</strong> processes one split and emits (termID, docID) key-value pairs. Output is written to local disk as <strong>segment files</strong> — one per term partition (e.g., a–f, g–p, q–z for j=3 partitions). Term partitions are defined by key ranges.</p>
+
+    <h3>Reduce Phase — Inverters</h3>
+    <p>Each <strong>inverter</strong> handles one term partition, reading r segment files (one per parser). It collects all docIDs for each termID, sorts them, and writes the final postings list. Each segment file requires only one sequential read, minimizing network traffic.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>MapReduce Schema</h4>
+        <strong>map:</strong> web collection → list(termID, docID)<br><br>
+        <strong>reduce:</strong> (termID, list(docID)) → postings list
+      </div>
+      <div class="g-card">
+        <h4>Why Dynamic Split Assignment?</h4>
+        The master assigns splits dynamically (not pre-assigned). If a machine fails or is slow, its split is simply reassigned to another available machine — fault tolerance at no extra cost.
+      </div>
+    </div>
+
+    <div class="warning-box">
+      <strong>Load Balancing Problem (Zipf's Law)</strong>
+      Term frequencies follow a power law — alphabetic partitioning (a–f, g–p, q–z) creates severe imbalance ('the', 'a', 'in' dominate certain partitions). Solution: <strong>sampling-based partitioning</strong> — sample 1% of the collection first, compute term-frequency distribution, then choose partition boundaries for equal total postings.
+    </div>
+  </div>
+
+  <!-- 4.5 Dynamic Indexing -->
+  <div class="card card-red">
+    <h2>4.5 Dynamic Indexing</h2>
+    <p>Real collections change constantly: new documents arrive, old ones are deleted or updated. A static index must be rebuilt periodically (acceptable for static collections like the Bible, but not for live web indexes).</p>
+
+    <h3>Auxiliary Index Approach</h3>
+    <p>Maintain two indexes: a large <strong>main index</strong> on disk + a small <strong>auxiliary index</strong> in memory for new documents. Searches run across both. Deletions handled with an <strong>invalidation bit vector</strong> — deleted documents filtered before results are returned. Updates = delete + re-insert.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>One File per Postings List</h4>
+        Merging is easy (extend each list), but most file systems cannot handle very large numbers of small files efficiently.
+      </div>
+      <div class="g-card">
+        <h4>One Large File (Concatenated)</h4>
+        Simpler, but updating requires rewriting the entire file. Each document update can cost up to M<sub>ave</sub> disk seeks.
+      </div>
+    </div>
+
+    <h3>Logarithmic Merging</h3>
+    <p>To avoid the <strong>O(T²/n)</strong> cost of simple auxiliary merging, use logarithmic merging. Maintain indexes I<sub>0</sub>, I<sub>1</sub>, I<sub>2</sub>, ... on disk of sizes n, 2n, 4n, ... The in-memory index Z<sub>0</sub> holds up to n postings.</p>
+
+    <div class="info-box">
+      <strong>Algorithm:</strong> When Z<sub>0</sub> is full → transfer to I<sub>0</sub> (if I<sub>0</sub> empty). If I<sub>0</sub> exists → merge Z<sub>0</sub> + I<sub>0</sub> → Z<sub>1</sub> of size 2n, then check I<sub>1</sub>, and so on. Each posting is processed <strong>once per level</strong>, 'percolating up' through at most log<sub>2</sub>(T/n) levels.
+    </div>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Simple Aux Merging</h4>
+        O(T²/n) total cost — every new batch rewrites the growing main index.
+      </div>
+      <div class="g-card">
+        <h4>Logarithmic Merging</h4>
+        O(T log(T/n)) — each posting merged at most log(T/n) times. Much better.
+      </div>
+      <div class="g-card">
+        <h4>Trade-offs</h4>
+        Query must merge log(T/n) indexes (not just 2). IDF statistics become approximate. Some large engines rebuild from scratch periodically.
+      </div>
+    </div>
+
+    <h3>Logarithmic Merge State (n=2): Binary Pattern</h3>
+    <table>
+      <tr><th>T (tokens)</th><th>k = T/n</th><th>k binary</th><th>I<sub>3</sub></th><th>I<sub>2</sub></th><th>I<sub>1</sub></th><th>I<sub>0</sub></th></tr>
+      <tr><td>2</td><td>1</td><td>0001</td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+      <tr><td>4</td><td>2</td><td>0010</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+      <tr><td>6</td><td>3</td><td>0011</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+      <tr><td>8</td><td>4</td><td>0100</td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+      <tr><td>16</td><td>8</td><td>1000</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+      <tr><td>30</td><td>15</td><td>1111</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+    </table>
+    <p style="font-size:.88rem;color:#555;margin-top:6px">Pattern: bit i of k (= T/n) directly gives the active state of index I<sub>i</sub>. Mirrors a binary counter / binomial heap structure.</p>
+  </div>
+
+  <!-- 4.6 Other Index Types -->
+  <div class="card">
+    <h2>4.6 Other Index Types</h2>
+
+    <h3>Impact-Sorted vs. DocID-Sorted Postings</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>DocID-Sorted</h4>
+        Postings ordered by increasing docID. Advantages: (1) efficient <strong>gap encoding</strong> compression (small differences); (2) new documents always appended at the end — simple dynamic updates.
+      </div>
+      <div class="g-card">
+        <h4>Impact-Sorted</h4>
+        Postings ordered by decreasing weight (e.g., tf-idf). Advantage: <strong>early termination</strong> — once weights are too small to change the top-k result, scanning stops. Complication: new documents may need insertion anywhere in the list → breaks append-only updates.
+      </div>
+    </div>
+
+    <h3>Security and Access Control Lists (ACLs)</h3>
+    <p>In enterprise IR, a low-level employee should not find salary documents in search results. <strong>Access Control Lists</strong> solve this by inverting the user-document permission matrix.</p>
+    <ul>
+      <li>Represent each document as the set of users who can access it.</li>
+      <li>Invert this matrix: for each user, a 'postings list' of document IDs they can access.</li>
+      <li>At query time: intersect text-based results with the user's ACL postings list.</li>
+    </ul>
+
+    <div class="danger-box">
+      <strong>Security + Spelling Correction Interaction</strong>
+      Spelling correction models built from all documents (including restricted ones) can leak information. Example: if a restricted document contains 'ProjectXenon', an unauthorized user querying a typo like 'ProjectXenon' might receive a 'Did you mean?' suggestion — confirming the term exists in the corpus. Solution: build separate correction models per access level.
+    </div>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card card-teal">
+    <h2>Quick Reference — Chapter 4 Key Facts</h2>
+    <table>
+      <tr><th>Concept</th><th>Key Detail</th></tr>
+      <tr><td><strong>BSBI</strong></td><td>Blocked Sort-Based Indexing; uses termIDs; O(T log T); external sort with priority queue merge</td></tr>
+      <tr><td><strong>SPIMI</strong></td><td>Single-Pass In-Memory Indexing; uses terms directly; O(T); dynamic doubling postings lists</td></tr>
+      <tr><td><strong>Inversion (BSBI)</strong></td><td>Sort (termID, docID) pairs + group docIDs per term into postings lists</td></tr>
+      <tr><td><strong>Reuters-RCV1</strong></td><td>800K docs, 100M tokens, 400K terms, 0.8 GB pairs, 10 blocks of 80 MB</td></tr>
+      <tr><td><strong>Seek time</strong></td><td>s = 5 ms; contiguous 10 MB → 0.205 s; fragmented 100×100KB → 0.7 s (3.4× slower)</td></tr>
+      <tr><td><strong>Buffer</strong></td><td>Main memory region holding a disk block being read/written</td></tr>
+      <tr><td><strong>MapReduce</strong></td><td>map (parsers emit (termID,docID)) + reduce (inverters build postings); master assigns splits dynamically</td></tr>
+      <tr><td><strong>Splits</strong></td><td>16–64 MB input chunks; dynamically assigned by master; enables fault tolerance</td></tr>
+      <tr><td><strong>Segment files</strong></td><td>j files per parser, one per term partition; each inverter reads r segment files</td></tr>
+      <tr><td><strong>Dynamic indexing</strong></td><td>Main index (disk) + auxiliary index (memory) + invalidation bit vector for deletions</td></tr>
+      <tr><td><strong>Logarithmic merging</strong></td><td>Indexes I<sub>0</sub>,I<sub>1</sub>,... of sizes n,2n,4n,...; O(T log(T/n)); state = binary representation of T/n</td></tr>
+      <tr><td><strong>Simple aux merging</strong></td><td>O(T²/n) — much worse than logarithmic</td></tr>
+      <tr><td><strong>ACL security</strong></td><td>Invert user-document matrix; intersect query results with user's ACL postings list</td></tr>
+      <tr><td><strong>Impact-sorted index</strong></td><td>Postings by weight → early termination in ranked retrieval; complicates dynamic updates</td></tr>
+      <tr><td><strong>IDF formula</strong></td><td>idf<sub>t</sub> = log(N / df<sub>t</sub>); auxiliary index causes underestimate of df → overestimate of idf</td></tr>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ===================== QUIZ ===================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Score</span>
+    <div class="score-track"><div class="score-fill" id="fill" style="width:0%"></div></div>
+    <span class="score-val" id="sval">0 / 15</span>
+  </div>
+  <div id="quiz-area"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Reset Quiz</button>
+</div>
+</div>
+
+<!-- ===================== CLASSIC ===================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q1 — Hardware: Quantify the cost of fragmented vs. contiguous disk storage for BSBI.</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p>Reading 10 MB as <strong>one contiguous chunk</strong>: 1 seek + transfer = (5×10<sup>−3</sup>) + (10×10<sup>6</sup> × 2×10<sup>−8</sup>) = 0.005 + 0.2 = <strong>0.205 s</strong></p>
+      <p>Reading the same 10 MB as <strong>100 non-contiguous chunks</strong>: 100 seeks + transfer = 100 × 0.005 + 0.2 = 0.5 + 0.2 = <strong>0.7 s</strong></p>
+      <p>The fragmented case is <strong>~3.4× slower</strong>. For index merging with millions of seeks, this difference is catastrophic.</p>
+      <p><strong>Why BSBI minimizes seeks:</strong> BSBI writes each block as a single sequential file and reads it back sequentially during merging. The only seeks are one per block file open — not one per record. This is why external sorting algorithms using sequential I/O are orders of magnitude faster than naive disk-based sorting (Exercise 4.1 shows naive disk sort of Reuters-RCV1 would take ~308 days).</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q2 — BSBI vs. SPIMI: Explain why SPIMI achieves O(T) while BSBI is O(T log T).</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>BSBI is O(T log T)</strong> because it must sort all T (termID, docID) pairs. Sorting T items requires O(T log T) comparisons across all blocks. This sort is the dominant step in theory.</p>
+      <p><strong>SPIMI's two key innovations eliminate sorting of pairs:</strong></p>
+      <ol>
+        <li><strong>No termID mapping:</strong> Uses terms directly (hash table dictionary), eliminating the global term-to-termID table that may not fit in memory. Blocks can be much larger.</li>
+        <li><strong>Dynamic postings lists:</strong> Each incoming token is appended directly to its term's postings list (doubled when full). No collection of all pairs followed by sorting — only the terms (not the pairs) are sorted before writing to disk.</li>
+      </ol>
+      <p>Term-sort per block is O(M<sub>block</sub> log M<sub>block</sub>) where M<sub>block</sub> ≪ T. Each token is processed in O(1) amortized time (hash lookup + list append). Total: <strong>O(T)</strong>.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q3 — MapReduce: Explain splits, parsers, segment files, and inverters. Why dynamic split assignment?</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Splits:</strong> The input collection is divided into n chunks of 16–64 MB. The master assigns splits dynamically — as a machine finishes one split, it gets the next. This provides automatic fault tolerance: if a machine fails, its split is simply reassigned.</p>
+      <p><strong>Parsers (map phase):</strong> Each parser processes one split and emits (termID, docID) key-value pairs. Output is written to local disk as j segment files, one per term partition (e.g., a–f, g–p, q–z).</p>
+      <p><strong>Segment files:</strong> Each parser creates j files. The master tells each inverter the locations of its r segment files (one per parser). Each segment file requires only one sequential read.</p>
+      <p><strong>Inverters (reduce phase):</strong> Each inverter handles one term partition, reads r segment files, collects all docIDs for each termID, sorts them, and writes the final postings list.</p>
+      <p><strong>Why dynamic assignment?</strong> Pre-assigning splits would mean a slow or failed machine blocks progress. Dynamic assignment ensures the cluster always works at full capacity — any available machine takes the next available split.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q4 — Logarithmic Merging: Describe the algorithm and prove O(T log(T/n)) complexity.</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Algorithm:</strong> Maintain on-disk indexes I<sub>0</sub>, I<sub>1</sub>, ..., I<sub>k</sub> of sizes n, 2n, 4n, ..., 2<sup>k</sup>n. In-memory Z<sub>0</sub> holds up to n postings.</p>
+      <p>When Z<sub>0</sub> fills up:</p>
+      <ul>
+        <li>If I<sub>0</sub> is empty: write Z<sub>0</sub> to I<sub>0</sub>.</li>
+        <li>If I<sub>0</sub> exists: merge Z<sub>0</sub> + I<sub>0</sub> → Z<sub>1</sub> of size 2n. Then check I<sub>1</sub>. If I<sub>1</sub> empty, write Z<sub>1</sub> to I<sub>1</sub>. If I<sub>1</sub> exists, merge → Z<sub>2</sub>. And so on.</li>
+      </ul>
+      <p><strong>State follows binary counting:</strong> The active index pattern equals the binary representation of k = T/n (the number of Z<sub>0</sub> fills). Bit i = 1 means I<sub>i</sub> is in use.</p>
+      <p><strong>Complexity proof:</strong> Each posting starts at level 0. Each time it is involved in a merge, it moves up one level. There are at most log<sub>2</sub>(T/n) levels. So each posting is processed at most log<sub>2</sub>(T/n) times. Total work = T × log(T/n) = <strong>O(T log(T/n))</strong>.</p>
+      <p><strong>Trade-offs:</strong> Query must now merge results from log(T/n) indexes (not just 2). IDF statistics are approximate (auxiliary index documents not in main index). Some large engines rebuild from scratch periodically to avoid these complexities.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Q5 — IDF Error: Show how a small auxiliary index causes large idf error for a trending term.</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Setup:</strong> Main index: N<sub>main</sub> = 800,000 documents. Auxiliary index: N<sub>aux</sub> = 1,000 new documents. Total N = 801,000.</p>
+      <p><strong>Scenario — Tropical Storm 'Flossie':</strong></p>
+      <p>Before the storm: 'Flossie' appears in df<sub>main</sub> = 2 documents.<br>
+      idf (main only) = log(800,000 / 2) = log(400,000) ≈ <strong>12.9</strong></p>
+      <p>After the storm: 500 new articles about Flossie arrive in the auxiliary index (df<sub>aux</sub> = 500).<br>
+      True idf = log(801,000 / 502) = log(1,596) ≈ <strong>7.37</strong></p>
+      <p><strong>Error:</strong> System computes idf = 12.9; true value = 7.37. Difference = 5.53 → <strong>75% overestimate</strong>.</p>
+      <p>This means 'Flossie' would be scored as an extremely rare, distinctive term when in reality it has become a high-frequency term. Any query about Flossie would over-rank documents.</p>
+      <p><strong>Why the error is large:</strong> Flossie's df jumps 250× (from 2 to 502). Because idf uses a logarithm, this maps to a large idf change. Even a tiny auxiliary index (1,000 out of 801,000 = 0.12% of total) causes catastrophic idf error for rapidly trending terms.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  body.classList.toggle('open');
+  chevron.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+const questions = [
+  {
+    q: "Reading 10 MB as one contiguous chunk vs. 100 non-contiguous chunks — approximately how much slower is the fragmented approach?",
+    opts: ["1.5×", "2×", "3.4×", "10×"],
+    ans: 2,
+    exp: "Contiguous: 1 seek (5 ms) + 0.2 s transfer = 0.205 s. Fragmented (100 chunks): 100 seeks (0.5 s) + 0.2 s transfer = 0.7 s. Ratio = 0.7 / 0.205 ≈ 3.4×. Seek time dominates."
+  },
+  {
+    q: "What is 'inversion' in the context of BSBI?",
+    opts: [
+      "Reversing the order of documents in the collection",
+      "Sorting termID–docID pairs and grouping docIDs per termID into postings lists",
+      "Converting terms to termIDs using a hash table",
+      "Merging multiple block files into one final index"
+    ],
+    ans: 1,
+    exp: "Inversion = two steps: (1) sort all (termID, docID) pairs by termID then docID; (2) collect all docIDs for each termID into a postings list. This transforms (term, doc) pairs into the inverted index structure."
+  },
+  {
+    q: "What is the time complexity of BSBI and what step drives it?",
+    opts: ["O(T) — hash table lookups", "O(T log T) — sorting all termID–docID pairs", "O(T²) — pairwise comparisons", "O(T log M) — binary search on vocabulary"],
+    ans: 1,
+    exp: "BSBI is O(T log T) because it must sort all T termID–docID pairs. Sorting T items requires O(T log T) comparisons. In practice for Reuters-RCV1, PARSENEXTBLOCK and MERGEBLOCKS are the dominant real-world costs."
+  },
+  {
+    q: "What is the key difference between BSBI and SPIMI in how they handle postings?",
+    opts: [
+      "BSBI uses terms; SPIMI uses termIDs",
+      "BSBI collects all pairs then sorts; SPIMI appends directly to dynamic postings lists",
+      "BSBI runs in memory; SPIMI uses disk",
+      "BSBI supports compression; SPIMI does not"
+    ],
+    ans: 1,
+    exp: "BSBI collects all (termID, docID) pairs into a buffer, then sorts them, then groups into postings. SPIMI appends each docID directly to its term's postings list as tokens arrive — no sorting of pairs needed. This makes SPIMI O(T) instead of O(T log T)."
+  },
+  {
+    q: "Why does SPIMI achieve O(T) time complexity while BSBI is O(T log T)?",
+    opts: [
+      "SPIMI uses faster hardware",
+      "SPIMI never sorts T pairs — only terms (M ≪ T) are sorted; each token is processed in O(1) amortized time",
+      "SPIMI skips the merging step",
+      "SPIMI uses termIDs which are faster to compare"
+    ],
+    ans: 1,
+    exp: "BSBI sorts all T (termID,docID) pairs: O(T log T). SPIMI only sorts the terms (not pairs) before writing each block: O(M_block log M_block) where M_block ≪ T. Each token is appended to its postings list in O(1) amortized time (due to doubling). Total: O(T)."
+  },
+  {
+    q: "In MapReduce index construction, what are 'parsers' and 'inverters'?",
+    opts: [
+      "Parsers check spelling; inverters check grammar",
+      "Parsers run the map phase emitting (termID,docID) pairs; inverters run the reduce phase building postings lists",
+      "Parsers split the input; inverters merge the output",
+      "Parsers build the dictionary; inverters build the postings"
+    ],
+    ans: 1,
+    exp: "Parsers = machines in the map phase. Each parser processes one split and emits (termID, docID) key-value pairs, writing output to segment files. Inverters = machines in the reduce phase. Each inverter handles one term partition, collecting and sorting docIDs to produce the final postings list."
+  },
+  {
+    q: "Why does the MapReduce master assign splits dynamically rather than pre-assigning them?",
+    opts: [
+      "To ensure alphabetical ordering of documents",
+      "Because dynamic assignment provides fault tolerance — a failed machine's split is simply reassigned",
+      "To reduce network traffic",
+      "Because splits are different sizes and must be balanced"
+    ],
+    ans: 1,
+    exp: "Any machine can fail or be slow at any time. Dynamic assignment means the master gives the next available split to any free machine. If a machine fails, its split (not yet processed) is simply reassigned — no coordination overhead or blocking. Pre-assignment would require complex failure recovery."
+  },
+  {
+    q: "In logarithmic merging with n=2, what is the active index state after T=12 tokens have been processed?",
+    opts: ["I3=0, I2=0, I1=1, I0=1", "I3=0, I2=1, I1=1, I0=0", "I3=0, I2=1, I1=0, I0=0", "I3=1, I2=0, I1=0, I0=0"],
+    ans: 1,
+    exp: "k = T/n = 12/2 = 6. Binary of 6 = 0110. Bit 0 (I0) = 0, bit 1 (I1) = 1, bit 2 (I2) = 1, bit 3 (I3) = 0. So state = I3=0, I2=1, I1=1, I0=0."
+  },
+  {
+    q: "What is the time complexity of logarithmic merging, and why is it better than simple auxiliary index merging?",
+    opts: [
+      "O(T log T) vs O(T²) — log merging amortizes rewriting",
+      "O(T log(T/n)) vs O(T²/n) — each posting processed at most log(T/n) times vs. rewriting main index every merge",
+      "O(T) vs O(T log T) — log merging uses no sorting",
+      "O(T log n) vs O(Tn) — fewer levels needed"
+    ],
+    ans: 1,
+    exp: "Simple auxiliary merging rewrites the entire main index each time the auxiliary fills up: O(T²/n) total. Logarithmic merging ensures each posting is processed at most log₂(T/n) times (once per level it 'percolates' through). Total: O(T log(T/n)) — much better."
+  },
+  {
+    q: "How are deletions handled in a dynamic indexing system?",
+    opts: [
+      "Documents are immediately removed from all postings lists",
+      "An invalidation bit vector marks deleted documents; they are filtered from results at query time",
+      "The main index is rebuilt after every deletion",
+      "Deleted documents are moved to the auxiliary index"
+    ],
+    ans: 1,
+    exp: "Maintaining an invalidation bit vector (one bit per document) is efficient. A deleted document's bit is set to 1. At query time, the result set is filtered against this vector before returning results. Document updates = delete (set bit) + re-insert in auxiliary index."
+  },
+  {
+    q: "Why does impact-sorted indexing complicate dynamic updates?",
+    opts: [
+      "Impact-sorted indexes use more disk space",
+      "New documents may need insertion anywhere in the list (not just at the end), breaking append-only updates",
+      "Impact-sorted indexes cannot use compression",
+      "The priority queue merge cannot work with impact-sorted data"
+    ],
+    ans: 1,
+    exp: "In a docID-sorted list, new documents always get appended at the end (their docID is the largest). In an impact-sorted list, a new document's weight (e.g., tf-idf score) may be high, requiring insertion in the middle of the list. This breaks the simple append-only dynamic update scheme."
+  },
+  {
+    q: "If naive disk-based sorting of Reuters-RCV1 (T=10⁸ pairs, 2 seeks per comparison, s=5ms) is used, how long does it take?",
+    opts: ["~1 hour", "~1 day", "~308 days", "~30 minutes"],
+    ans: 2,
+    exp: "Comparisons = T log₂T = 10⁸ × log₂(10⁸) ≈ 10⁸ × 26.6 = 2.66×10⁹. Disk seeks = 2 × 2.66×10⁹ = 5.32×10⁹. Time = 5.32×10⁹ × 5×10⁻³ s = 2.66×10⁷ s ≈ 308 days. This is why in-memory sorting (BSBI/SPIMI) is essential."
+  },
+  {
+    q: "How does a spelling correction system built from all documents compromise security with ACLs?",
+    opts: [
+      "It makes the ACL index slower to query",
+      "It can reveal the existence of restricted terms — a 'Did you mean?' suggestion confirms a term exists in restricted documents",
+      "It increases the storage cost of the inverted index",
+      "It confuses the IDF calculation for public documents"
+    ],
+    ans: 1,
+    exp: "If a restricted document contains term 'ProjectXenon', the correction model is trained on all documents including restricted ones. An unauthorized user querying a nearby misspelling gets 'Did you mean ProjectXenon?' — confirming the term exists in the corpus and leaking information about restricted content."
+  },
+  {
+    q: "For MapReduce load balancing, alphabetic term partitioning (a–f, g–p, q–z) causes problems because of:",
+    opts: [
+      "Too many term partitions to manage",
+      "Zipf's law — a few very frequent terms dominate certain partitions, creating severe load imbalance",
+      "The merge step cannot handle alphabetically ordered data",
+      "Binary search requires sorted partitions but Zipf's law prevents this"
+    ],
+    ans: 1,
+    exp: "Zipf's law: term frequencies follow a power law — 'the', 'a', 'and', 'in' are extremely frequent. Alphabetic partitioning puts these all into specific buckets (t-partition, a-partition), creating massive imbalance. Solution: sampling-based partitioning — sample 1% to find distribution, then set boundaries for equal postings."
+  },
+  {
+    q: "How does the auxiliary index cause IDF error for a trending term, and why is this error particularly large?",
+    opts: [
+      "The auxiliary index uses approximate hashing which rounds IDF values",
+      "IDF is computed on the main index only; when a term's df jumps in the auxiliary index, the main-only IDF is a large overestimate",
+      "The auxiliary index sorts terms differently, causing lookup errors",
+      "Large auxiliary indexes consume memory needed for IDF tables"
+    ],
+    ans: 1,
+    exp: "IDF = log(N/df). With the auxiliary index not included in IDF computation, df is underestimated → IDF is overestimated. For a trending term like 'Flossie' jumping from df=2 to df=502 (250× change), IDF drops from 12.9 to 7.37 — a 75% overestimate. The logarithm amplifies large relative changes in df into significant absolute IDF errors."
+  }
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  score = 0; answered = 0;
+  updateScore();
+  const area = document.getElementById('quiz-area');
+  area.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  questions.forEach((q, qi) => {
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;color:#888;flex-shrink:0">${letters[oi]}</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    area.innerHTML += `
+      <div class="q-card">
+        <div class="q-num">Question ${qi+1} / ${questions.length}</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}">${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(b => b.disabled = true);
+  const chosen = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) { chosen.classList.add('correct'); score++; }
+  else { chosen.classList.add('wrong'); correct.classList.add('correct'); }
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  answered++;
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('fill').style.width = pct + '%';
+  document.getElementById('sval').textContent = score + ' / ' + questions.length;
+}
+
+function resetQuiz() { buildQuiz(); }
+buildQuiz();
+</script>
+</body>
+</html>
