@@ -12,7 +12,7 @@ Interactive course notes and quiz system. All content is in English.
 | 2 | The Term Vocabulary | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch2.html) |
 | 3 | Dictionaries & Tolerant Retrieval | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch3.html) |
 | 4 | Index Construction | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch4.html) |
-| 5 | Index Compression | Coming Soon | — |
+| 5 | Index Compression | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch5.html) |
 | 6 | Scoring, TF-IDF & VSM | Coming Soon | — |
 
 ## Topics Covered
@@ -28,3 +28,6 @@ Hashing vs. B-trees, wildcard queries (trailing/leading/general), permuterm inde
 
 **Chapter 4 — Index Construction**
 Hardware basics (seek time, transfer rate, RCV1 stats), BSBI (Blocked Sort-Based Indexing, O(T log T)), SPIMI (Single-Pass In-Memory Indexing, O(T)), MapReduce distributed indexing, dynamic indexing, logarithmic merging, security and access control.
+
+**Chapter 5 — Index Compression**
+Heaps' law (vocabulary growth), Zipf's law (term frequency distribution), lossless vs. lossy compression, dictionary compression (fixed-width, string, blocked storage, front coding), gap encoding, VB codes, γ codes, δ codes.

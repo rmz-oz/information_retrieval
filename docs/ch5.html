@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch5: Index Compression</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .tab-btn{padding:12px 14px;font-size:.82rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Home</a>
+  <h1>Chapter 5: Index Compression</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Lesson</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Classic Questions · 5</button>
+</div>
+
+<!-- ===================== LESSON ===================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 5.1 Statistical Properties -->
+  <div class="card">
+    <h2>5.1 Statistical Properties of Terms</h2>
+    <p>Chapter 5 compresses the two main components of an inverted index: the <strong>dictionary</strong> and the <strong>postings file</strong>. All techniques here are <strong>lossless</strong> — the original data can be fully recovered. Compression serves three goals: less disk space, better cache utilization (fit more in RAM), and faster disk-to-memory transfer.</p>
+
+    <div class="info-box">
+      <strong>Lossless vs. Lossy</strong>
+      Lossless: VB codes, γ codes, blocked dictionary, front coding — index answers every query identically.
+      Lossy: case folding, stemming, stop-word removal (covered in Ch. 2) — some information is permanently discarded.
+    </div>
+
+    <h3>Preprocessing Effects on Reuters-RCV1 (Table 5.1)</h3>
+    <table>
+      <tr><th>Processing</th><th>Distinct terms</th><th>Δ%</th><th>T%</th><th>Nonpos. postings</th><th>Δ%</th><th>T%</th></tr>
+      <tr><td>Unfiltered</td><td>484,494</td><td>—</td><td>—</td><td>109,971,179</td><td>—</td><td>—</td></tr>
+      <tr><td>No numbers</td><td>473,723</td><td>−2</td><td>−2</td><td>100,680,242</td><td>−8</td><td>−8</td></tr>
+      <tr><td>Case folding</td><td>391,523</td><td>−17</td><td>−19</td><td>96,969,056</td><td>−3</td><td>−12</td></tr>
+      <tr><td>30 stop words</td><td>391,493</td><td>−0</td><td>−19</td><td>83,390,443</td><td>−14</td><td>−24</td></tr>
+      <tr><td>150 stop words</td><td>391,373</td><td>−0</td><td>−19</td><td>67,001,847</td><td>−30</td><td>−39</td></tr>
+      <tr><td>Stemming</td><td>322,383</td><td>−17</td><td>−33</td><td>63,812,300</td><td>−4</td><td>−42</td></tr>
+    </table>
+
+    <div class="warning-box">
+      <strong>Key Observations</strong>
+      <ul>
+        <li><strong>Case folding &amp; stemming</strong> each cut vocabulary by ~17%, but have smaller impact on postings count.</li>
+        <li><strong>Stop word removal</strong> (150 words) cuts postings by 30–39% but barely touches vocabulary — stop words are few but extremely frequent.</li>
+        <li><strong>Rule of 30:</strong> The 30 most common words account for 30% of all tokens (31% in RCV1).</li>
+        <li>Compression beats stop-word removal: VB encoding gives 116 MB vs. the stop-word-only uncompressed index at ~255 MB.</li>
+      </ul>
+    </div>
+
+    <h3>5.1.1 Heaps' Law — Estimating Vocabulary Size</h3>
+    <p>Heaps' law estimates vocabulary size <strong>M</strong> as a function of collection size <strong>T</strong> (number of tokens):</p>
+    <div class="info-box">
+      <strong>M = k · T<sup>b</sup></strong> &nbsp;&nbsp; where 30 ≤ k ≤ 100 and b ≈ 0.5
+      <br>For Reuters-RCV1: <strong>k = 44, b = 0.49</strong> → M = 44 × T<sup>0.49</sup>
+      <br>Verification: T = 1,000,020 → M = 44 × 1,000,020<sup>0.49</sup> ≈ 38,323. Actual: 38,365. ✓
+    </div>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Vocabulary Never Stops Growing</h4>
+        There is no maximum vocabulary size for a large enough collection. We cannot pre-allocate a fixed dictionary.
+      </div>
+      <div class="g-card">
+        <h4>M Is Very Large</h4>
+        For large collections M grows as T<sup>0.5</sup>. This makes dictionary compression essential, not optional.
+      </div>
+    </div>
+
+    <h3>5.1.2 Zipf's Law — Distribution of Term Frequencies</h3>
+    <p>Zipf's law models the collection frequency (cf) of terms ranked by frequency:</p>
+    <div class="info-box">
+      <strong>cf<sub>i</sub> ∝ 1/i</strong> (rank i has frequency ∝ 1/i) — a <em>power law</em> with exponent −1
+      <br>log cf<sub>i</sub> = log c + k·log i  (k = −1) → linear on a log-log plot
+      <br>For RCV1 (M = 400,000): H<sub>M</sub> ≈ ln(400,000) ≈ 13 → c = 1/13. Term i occurs ≈ 15/i times per document.
+    </div>
+    <p>Zipf's law explains why gap encoding works well for <strong>frequent terms</strong> (gaps ≈ 1) but less well for <strong>rare terms</strong> (gaps ≈ docID magnitude — no savings). It also justifies variable encoding: the gap distribution is heavily skewed toward small values.</p>
+  </div>
+
+  <!-- 5.2 Dictionary Compression -->
+  <div class="card card-teal">
+    <h2>5.2 Dictionary Compression</h2>
+    <p>The dictionary is small relative to the postings file, but fits in RAM — keeping it compressed means fewer disk seeks during query processing. For RCV1, assume <strong>M = 400,000</strong> terms with an average of 8 characters each.</p>
+
+    <h3>5.2.1 Fixed-Width Array</h3>
+    <p>Allocate a fixed slot per term: <strong>20 bytes</strong> (term) + <strong>4 bytes</strong> (doc freq) + <strong>4 bytes</strong> (postings pointer) = <strong>28 bytes/entry</strong>.</p>
+    <div class="info-box">
+      RCV1: 400,000 × 28 = <strong>11.2 MB</strong>. Binary search over sorted array.
+    </div>
+    <div class="danger-box">
+      <strong>Problems</strong>
+      <ul>
+        <li>Wastes ~12 bytes/term on average (avg English term ≈ 8 chars, not 20).</li>
+        <li>Cannot store terms longer than 20 chars (e.g., <em>hydrochlorofluorocarbons</em>).</li>
+      </ul>
+    </div>
+
+    <h3>5.2.2 Dictionary as a String</h3>
+    <p>Store all terms concatenated in one long string. Per entry: <strong>4</strong> (freq) + <strong>4</strong> (postings ptr) + <strong>3</strong> (term ptr into string) + avg <strong>8</strong> (term chars) = <strong>19 bytes</strong>.</p>
+    <div class="info-box">
+      RCV1: 400,000 × (4+4+3) + 400,000 × 8 = 4.4 MB + 3.2 MB = <strong>7.6 MB</strong>
+      <br>Savings: 11.2 − 7.6 = 3.6 MB (<strong>32% reduction</strong>)
+      <br>Term pointers need log<sub>2</sub>(3.2 × 10<sup>6</sup>) ≈ 22 bits ≈ <strong>3 bytes</strong>.
+    </div>
+
+    <h3>5.2.3 Blocked Storage</h3>
+    <p>Group consecutive terms into blocks of size <strong>k</strong>. Store only 1 term pointer per block (the first term). Add 1 byte per term for its string length. For <strong>k = 4</strong>:</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Savings per block</h4>
+        Eliminate (k−1) = 3 term pointers × 3 bytes = <strong>9 bytes saved</strong>
+      </div>
+      <div class="g-card">
+        <h4>Overhead per block</h4>
+        Add k = 4 length bytes → <strong>4 bytes added</strong>
+      </div>
+    </div>
+    <div class="info-box">
+      Net per block = 9 − 4 = 5 bytes. Total: 400,000/4 × 5 = 0.5 MB saved.
+      <br>Result: 7.6 − 0.5 = <strong>7.1 MB</strong>. Trade-off: binary search over blocks + linear scan within block.
+    </div>
+
+    <table>
+      <tr><th>Block size k</th><th>Bytes/entry</th><th>Dictionary size</th><th>Savings vs. string</th></tr>
+      <tr><td>1 (string, no blocking)</td><td>19.000</td><td>7.60 MB</td><td>—</td></tr>
+      <tr><td>4</td><td>17.750</td><td>7.10 MB</td><td>0.50 MB</td></tr>
+      <tr><td>8</td><td>17.375</td><td>6.95 MB</td><td>0.65 MB</td></tr>
+      <tr><td>16</td><td>17.188</td><td>6.88 MB</td><td>0.72 MB</td></tr>
+    </table>
+
+    <p>Note <strong>diminishing returns</strong>: going from k=4 to k=8 saves only 0.15 MB more, k=8 to k=16 saves 0.07 MB more. Larger k also increases lookup time (see lookup formula below).</p>
+
+    <div class="info-box">
+      <strong>Lookup cost for block size k:</strong>
+      Total steps ≈ log<sub>2</sub>(M/k) + (k−1)/2
+      <br>k=1: 18.6 steps; k=4: 18.1 (slightly faster); k=8: 19.1 (+3%); k=16: 22.1 (+19%)
+    </div>
+
+    <h3>Front Coding</h3>
+    <p>Alphabetically adjacent terms often share prefixes. Front coding encodes only the <em>difference</em> from the shared prefix. Mark the common prefix end with <strong>*</strong>, then encode the varying suffix.</p>
+    <pre><code>automata, automate, automatic, automation
+→ 8automat*a1■e2■ic3■ion
+  (8 = length of "automata"; 1,2,3 = length of varying suffix)</code></pre>
+    <div class="info-box">
+      Applied on top of blocked storage for RCV1: saves an additional 1.2 MB → <strong>5.9 MB</strong>.
+    </div>
+    <div class="warning-box">
+      <strong>Perfect Hashing</strong> (mapping M terms to [1..M] without collisions) gives even better compression but <strong>cannot be used in dynamic environments</strong> — adding any new term causes a collision and requires rebuilding the entire hash function.
+    </div>
+  </div>
+
+  <!-- 5.3 Postings Compression -->
+  <div class="card card-purple">
+    <h2>5.3 Postings File Compression</h2>
+    <p>RCV1: 800,000 docs → docIDs need log<sub>2</sub>(800,000) ≈ <strong>20 bits</strong> each. Uncompressed: 100M × 20/8 = <strong>250 MB</strong>. Using 32-bit integers: <strong>400 MB</strong>. Goal: compress this significantly.</p>
+
+    <h3>Gap Encoding</h3>
+    <p>Instead of storing absolute docIDs, store the <strong>gaps</strong> (differences between consecutive docIDs). Frequent terms have gaps ≈ 1; rare terms have gaps ≈ docID magnitude.</p>
+
+    <table>
+      <tr><th>Term</th><th>Encoding</th><th>Postings list (partial)</th></tr>
+      <tr><td>the</td><td>docIDs</td><td>… 283042, 283043, 283044, 283045</td></tr>
+      <tr><td>the</td><td>gaps</td><td>… (first docID), 1, 1, 1</td></tr>
+      <tr><td>computer</td><td>docIDs</td><td>… 283047, 283154, 283159, 283202</td></tr>
+      <tr><td>computer</td><td>gaps</td><td>… 283047, 107, 5, 43</td></tr>
+      <tr><td>arachnocentric</td><td>docIDs</td><td>252000, 500100</td></tr>
+      <tr><td>arachnocentric</td><td>gaps</td><td>252000, 248100</td></tr>
+    </table>
+
+    <p>We need a <strong>variable encoding</strong> that uses few bits for small gaps and more bits for large gaps.</p>
+
+    <h3>5.3.1 Variable Byte (VB) Codes</h3>
+    <p>Each byte has a <strong>7-bit payload</strong> + <strong>1-bit continuation flag</strong> (MSB). If the continuation bit = <strong>0</strong>: more bytes follow. If = <strong>1</strong>: this is the last byte of this gap.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Encoding Algorithm</h4>
+        Repeatedly extract 7-bit chunks from the gap (LSB first). Set continuation bit to 1 on the final byte, 0 on all preceding bytes.
+      </div>
+      <div class="g-card">
+        <h4>Decoding Algorithm</h4>
+        Accumulate 7-bit payloads until encountering a byte whose continuation bit = 1. That completes one gap value.
+      </div>
+    </div>
+
+    <h3>VB Encoding Examples</h3>
+    <table>
+      <tr><th>Gap</th><th>Decomposition</th><th>VB code (binary)</th></tr>
+      <tr><td>5</td><td>5 &lt; 128 → 1 byte</td><td><code>1|0000101</code> = <strong>10000101</strong></td></tr>
+      <tr><td>824</td><td>824 = 6×128 + 56 → high=0000110, low=0111000</td><td><code>0|0000110 1|0111000</code> = <strong>00000110 10111000</strong></td></tr>
+      <tr><td>214,577</td><td>214577 = 13×128² + 12×128 + 49 → 13, 12, 49</td><td><strong>00001101 00001100 10110001</strong></td></tr>
+    </table>
+
+    <table>
+      <tr><th>Bytes</th><th>Max gap encodable</th><th>Capacity</th></tr>
+      <tr><td>1</td><td>127</td><td>2<sup>7</sup> − 1</td></tr>
+      <tr><td>2</td><td>16,383</td><td>2<sup>14</sup> − 1</td></tr>
+      <tr><td>3</td><td>2,097,151</td><td>2<sup>21</sup> − 1</td></tr>
+      <tr><td>4</td><td>268,435,455</td><td>2<sup>28</sup> − 1</td></tr>
+    </table>
+
+    <div class="success-box">
+      <strong>VB encoding of RCV1 postings: 116 MB</strong> (&gt;50% reduction from 250 MB uncompressed).
+      VB codes are byte-aligned → fast to decode (no bit shifting). Simple to implement. Excellent practical tradeoff.
+    </div>
+
+    <h3>5.3.2 γ (Gamma) Codes</h3>
+    <p>For even better compression at the cost of more complex decoding, use <strong>bit-level codes</strong>. γ encoding splits a gap G into two parts:</p>
+    <ul>
+      <li><strong>Offset:</strong> G in binary with the leading 1 removed. For G=13=1101₂, offset = 101.</li>
+      <li><strong>Length:</strong> the bit-length of the offset (= ⌊log<sub>2</sub>G⌋), encoded in <strong>unary</strong>. For length=3, unary = 1110.</li>
+      <li><strong>γ code = length (unary) + offset.</strong> For G=13: γ = 1110 101 = <strong>1110101</strong></li>
+    </ul>
+
+    <div class="info-box">
+      <strong>Total bit length = 2⌊log<sub>2</sub>G⌋ + 1</strong> (always odd).
+      γ codes are always within a factor of 2 of the theoretically optimal code length log<sub>2</sub>G.
+    </div>
+
+    <table>
+      <tr><th>G</th><th>Binary</th><th>Offset</th><th>Length (unary)</th><th>γ code</th><th># bits</th></tr>
+      <tr><td>1</td><td>1</td><td>(empty)</td><td>0</td><td>0</td><td>1</td></tr>
+      <tr><td>2</td><td>10</td><td>0</td><td>10</td><td>10,0</td><td>3</td></tr>
+      <tr><td>3</td><td>11</td><td>1</td><td>10</td><td>10,1</td><td>3</td></tr>
+      <tr><td>4</td><td>100</td><td>00</td><td>110</td><td>110,00</td><td>5</td></tr>
+      <tr><td>9</td><td>1001</td><td>001</td><td>1110</td><td>1110,001</td><td>7</td></tr>
+      <tr><td>13</td><td>1101</td><td>101</td><td>1110</td><td>1110,101</td><td>7</td></tr>
+      <tr><td>24</td><td>11000</td><td>1000</td><td>11110</td><td>11110,1000</td><td>9</td></tr>
+      <tr><td>511</td><td>111111111</td><td>11111111</td><td>111111110</td><td>111111110,11111111</td><td>17</td></tr>
+      <tr><td>1025</td><td>10000000001</td><td>0000000001</td><td>11111111110</td><td>11111111110,0000000001</td><td>21</td></tr>
+    </table>
+
+    <h3>Key Properties of γ Codes</h3>
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Universal</h4>
+        Within a factor of 3 of optimal for <em>any</em> probability distribution P over gaps: E(L<sub>γ</sub>)/H(P) ≤ 3 for H(P) &gt; 1.
+      </div>
+      <div class="g-card">
+        <h4>Prefix-Free</h4>
+        No γ code is a prefix of another. Enables unique decoding without delimiters — just scan bits left-to-right.
+      </div>
+      <div class="g-card">
+        <h4>Parameter-Free</h4>
+        Requires no model fitting. Other codes (Golomb, Bernoulli-optimal) require fitting to the actual gap distribution, which changes dynamically.
+      </div>
+    </div>
+
+    <div class="success-box">
+      <strong>γ encoding of RCV1 postings: 101 MB</strong> (predicted 224 MB via Zipf analysis; actual is better because Zipf's law is approximate and gaps are non-uniform within blocks).
+    </div>
+
+    <h3>δ (Delta) Codes</h3>
+    <p>Like γ codes but encode the <strong>length part using γ code</strong> instead of unary. For G with offset length L: δ(G) = γ(L) + offset. More efficient for large G because γ(L) is shorter than unary(L) for large L.</p>
+    <div class="info-box">
+      Example: δ(1025): G=1025, offset has 10 bits. γ(10) = 1110010 (7 bits). δ(1025) = 1110010,0000000001 = <strong>17 bits</strong> vs γ(1025) = 21 bits. Savings = 4 bits.
+      <br>δ codes are better than γ for large gaps (rare terms, web-scale collections).
+    </div>
+  </div>
+
+  <!-- VB vs γ comparison -->
+  <div class="card card-amber">
+    <h2>VB vs. γ Trade-off &amp; Full Size Table</h2>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Use γ codes when…</h4>
+        Disk space is the scarce resource. Compression ratio is paramount. Accept slower decoding (~15% better than VB).
+      </div>
+      <div class="g-card">
+        <h4>Use VB codes when…</h4>
+        Query throughput matters more than space. Byte-aligned → no bit manipulation → fast decoding. Most practical IR systems choose VB.
+      </div>
+    </div>
+
+    <h3>Complete Size Comparison (RCV1)</h3>
+    <table>
+      <tr><th>Data Structure</th><th>Size (MB)</th></tr>
+      <tr><td>Dictionary, fixed-width</td><td>11.2</td></tr>
+      <tr><td>Dictionary, term pointers into string</td><td>7.6</td></tr>
+      <tr><td>~, with blocking k=4</td><td>7.1</td></tr>
+      <tr><td>~, with blocking &amp; front coding</td><td>5.9</td></tr>
+      <tr><td>Collection (text + XML markup)</td><td>3,600.0</td></tr>
+      <tr><td>Collection (text only)</td><td>960.0</td></tr>
+      <tr><td>Term incidence matrix</td><td>40,000.0</td></tr>
+      <tr><td>Postings, uncompressed (32-bit words)</td><td>400.0</td></tr>
+      <tr><td>Postings, uncompressed (20 bits)</td><td>250.0</td></tr>
+      <tr><td>Postings, variable byte encoded</td><td>116.0</td></tr>
+      <tr><td>Postings, γ encoded</td><td>101.0</td></tr>
+    </table>
+
+    <div class="success-box">
+      <strong>Compression ratio:</strong> (101 + 5.9) / 3600 ≈ <strong>0.03</strong> — the compressed index is only 3% of the full collection size! Even vs. text-only (960 MB), it is about 11%.
+    </div>
+  </div>
+
+</div><!-- /container -->
+</div><!-- /lesson -->
+
+<!-- ===================== QUIZ ===================== -->
+<div id="quiz" class="section">
+<div class="container">
+
+  <div class="score-row">
+    <span class="score-label">Score</span>
+    <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+
+  <!-- Q1 -->
+  <div class="q-card">
+    <div class="q-num">Question 1</div>
+    <div class="q-text">What are the three main benefits of compressing an IR index?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> Faster indexing, smaller vocabulary, better tokenization</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> Reduced disk space, better cache utilization, faster disk-to-memory transfer</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> Reduced vocabulary size, faster stemming, fewer stop words</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> Smaller postings, faster ranking, better recall</button>
+    </div>
+    <div class="explanation">Compression reduces disk space, fits more index in RAM (cache utilization), and allows faster transfer because decompression is cheap — a small compressed file transfers faster than a large uncompressed one.</div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="q-card">
+    <div class="q-num">Question 2</div>
+    <div class="q-text">Heaps' law is M = kT<sup>b</sup>. What are the typical parameter ranges and the RCV1 best-fit values?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 1 ≤ k ≤ 10, b ≈ 0.9; RCV1: k=10, b=0.85</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> 10 ≤ k ≤ 50, b ≈ 0.7; RCV1: k=20, b=0.65</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> 30 ≤ k ≤ 100, b ≈ 0.5; RCV1: k=44, b=0.49</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 100 ≤ k ≤ 500, b ≈ 0.3; RCV1: k=200, b=0.32</button>
+    </div>
+    <div class="explanation">Standard ranges: 30 ≤ k ≤ 100, b ≈ 0.5. RCV1 best fit: k=44, b=0.49, giving M = 44 × T<sup>0.49</sup>. Verification: T=1,000,020 → predicted 38,323, actual 38,365.</div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="q-card">
+    <div class="q-num">Question 3</div>
+    <div class="q-text">What does Heaps' law imply about vocabulary growth as the collection grows?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> Vocabulary converges to a fixed maximum size</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> Vocabulary grows proportionally to the number of documents</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> Vocabulary never stops growing; there is no maximum for a large enough collection</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> Vocabulary shrinks after stemming reduces redundancy</button>
+    </div>
+    <div class="explanation">Because b &lt; 1, M grows without bound as T increases — just more slowly. We cannot pre-allocate a fixed dictionary size. This is the key implication that makes dictionary compression essential.</div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="q-card">
+    <div class="q-num">Question 4</div>
+    <div class="q-text">Zipf's law states that the collection frequency of the term ranked i is proportional to:</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> i</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> log i</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> 1/i</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 1/i²</button>
+    </div>
+    <div class="explanation">Zipf's law: cf<sub>i</sub> ∝ 1/i. This is a power law with exponent −1 (linear on a log-log plot). It means the most frequent term is twice as frequent as the second, three times the third, etc.</div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="q-card">
+    <div class="q-num">Question 5</div>
+    <div class="q-text">Why does gap encoding benefit frequent terms much more than rare terms?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> Frequent terms have longer postings lists that are harder to compress</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> Frequent terms appear in many consecutive documents, so gaps are small (often 1); rare terms have large gaps comparable to docID magnitude</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> Rare terms have more alphabetically adjacent entries, enabling front coding</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> Frequent terms require fewer bits in fixed-width encoding</button>
+    </div>
+    <div class="explanation">Zipf's law explains this: 'the' (rank 1) appears in most documents so gaps ≈ 1, encodable in a handful of bits. 'arachnocentric' (rare) appears in only 2 documents; its gap ≈ 248,100, requiring nearly as many bits as a raw docID.</div>
+  </div>
+
+  <!-- Q6 -->
+  <div class="q-card">
+    <div class="q-num">Question 6</div>
+    <div class="q-text">For Reuters-RCV1 with M=400,000 terms, what is the size of the fixed-width dictionary?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 7.6 MB</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> 5.9 MB</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> 11.2 MB</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 3.2 MB</button>
+    </div>
+    <div class="explanation">Fixed-width: 20 bytes (term) + 4 bytes (doc freq) + 4 bytes (postings ptr) = 28 bytes/entry. 400,000 × 28 = 11.2 MB.</div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="q-card">
+    <div class="q-num">Question 7</div>
+    <div class="q-text">In the dictionary-as-a-string approach, how many bytes does each term's pointer into the string require for RCV1?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 4 bytes</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> 3 bytes (22 bits)</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> 2 bytes</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 1 byte</button>
+    </div>
+    <div class="explanation">The term string for 400,000 terms × 8 chars = 3.2 MB = 3.2 × 10<sup>6</sup> positions. log<sub>2</sub>(3.2 × 10<sup>6</sup>) ≈ 22 bits ≈ 3 bytes. Total per entry: 4+4+3 = 11 bytes overhead + 8 chars = 19 bytes → 7.6 MB total.</div>
+  </div>
+
+  <!-- Q8 -->
+  <div class="q-card">
+    <div class="q-num">Question 8</div>
+    <div class="q-text">In blocked dictionary storage with k=4, what is the net saving per block (in bytes)?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 3 bytes</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> 9 bytes</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> 5 bytes</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 12 bytes</button>
+    </div>
+    <div class="explanation">Save: (k−1) × 3 = 3 × 3 = 9 bytes (eliminated term pointers). Add: k × 1 = 4 bytes (length bytes). Net = 9 − 4 = 5 bytes per block. For RCV1: 400,000/4 × 5 = 0.5 MB saved → 7.1 MB total.</div>
+  </div>
+
+  <!-- Q9 -->
+  <div class="q-card">
+    <div class="q-num">Question 9</div>
+    <div class="q-text">What does the front coding of 'automata', 'automate', 'automatic', 'automation' look like?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> auto*mata|mate|matic|mation</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> 8automat*a1■e2■ic3■ion</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> automat[a,e,ic,ion]</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 4auto*mata|mate|matic|mation</button>
+    </div>
+    <div class="explanation">'8automat*a1■e2■ic3■ion': 8 = length of 'automata' (the first term in full), 'automat' is the common prefix (marked with *), then each subsequent term gives its suffix length + suffix: 1+a, 2+ic, 3+ion (from 'automate'→'e', 'automatic'→'ic', 'automation'→'ion').</div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="q-card">
+    <div class="q-num">Question 10</div>
+    <div class="q-text">In VB encoding, what is the role of the continuation bit and what is the maximum gap encodable in 2 bytes?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> Continuation bit = 1 means more bytes follow; max 2-byte gap = 16,384</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> Continuation bit = 1 means this is the last byte; max 2-byte gap = 16,383</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> Continuation bit = 0 means this is the last byte; max 2-byte gap = 32,767</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> Continuation bit = 1 means this is the last byte; max 2-byte gap = 255</button>
+    </div>
+    <div class="explanation">Continuation bit = 1 → last byte (stop reading). Two bytes give 14 payload bits → max = 2<sup>14</sup> − 1 = 16,383. One byte: 2<sup>7</sup>−1 = 127. Three bytes: 2<sup>21</sup>−1 = 2,097,151.</div>
+  </div>
+
+  <!-- Q11 -->
+  <div class="q-card">
+    <div class="q-num">Question 11</div>
+    <div class="q-text">What is the γ code for G = 24?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> 11101000 (8 bits)</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> 11110,1000 (9 bits)</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> 1110,1000 (7 bits)</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> 111110,11000 (11 bits)</button>
+    </div>
+    <div class="explanation">G=24: binary = 11000 (5 bits). Leading 1 removed → offset = 1000 (4 bits). Length = 4. Unary(4) = 11110. γ(24) = 11110,1000 = 9 bits. Formula check: 2×⌊log<sub>2</sub>24⌋+1 = 2×4+1 = 9. ✓</div>
+  </div>
+
+  <!-- Q12 -->
+  <div class="q-card">
+    <div class="q-num">Question 12</div>
+    <div class="q-text">Which of the following is NOT a property of γ codes?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> Universal: within factor 3 of optimal for any distribution</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> Prefix-free: no code is a prefix of another</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> Parameter-free: no distribution fitting required</button>
+      <button class="option" onclick="answer(this,true)"><span>D.</span> Byte-aligned: code boundaries always fall on byte boundaries</button>
+    </div>
+    <div class="explanation">γ codes are bit-level codes — boundaries fall in the middle of machine words, requiring shifts and masks. This is precisely why γ decoding is slower than VB. VB codes are byte-aligned, not γ codes.</div>
+  </div>
+
+  <!-- Q13 -->
+  <div class="q-card">
+    <div class="q-num">Question 13</div>
+    <div class="q-text">What are the actual postings file sizes for RCV1 with VB and γ encoding respectively?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> VB = 200 MB, γ = 180 MB</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> VB = 130 MB, γ = 110 MB</button>
+      <button class="option" onclick="answer(this,true)"><span>C.</span> VB = 116 MB, γ = 101 MB</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> VB = 101 MB, γ = 116 MB</button>
+    </div>
+    <div class="explanation">VB = 116 MB, γ = 101 MB (γ is ~15% better). Both are far below the 250 MB uncompressed (20-bit) or 400 MB (32-bit) baselines. Note γ &lt; VB — γ achieves better compression at the cost of slower decoding.</div>
+  </div>
+
+  <!-- Q14 -->
+  <div class="q-card">
+    <div class="q-num">Question 14</div>
+    <div class="q-text">How do δ (delta) codes differ from γ codes, and when are δ codes better?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> δ codes use unary for the offset instead of binary; better for small gaps</button>
+      <button class="option" onclick="answer(this,true)"><span>B.</span> δ codes encode the length part using γ code instead of unary; better for large gaps</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> δ codes use byte alignment like VB; better for frequent terms</button>
+      <button class="option" onclick="answer(this,false)"><span>D.</span> δ codes are identical to γ codes but applied after gap encoding</button>
+    </div>
+    <div class="explanation">δ(G) = γ(L) + offset where L is the offset length. For G=1025: γ(1025) needs unary(10)=11 bits for length → 21 bits total; δ(1025) uses γ(10)=7 bits for length → 17 bits total. δ wins for large G (rare terms in large collections).</div>
+  </div>
+
+  <!-- Q15 -->
+  <div class="q-card">
+    <div class="q-num">Question 15</div>
+    <div class="q-text">The compressed RCV1 index (γ-encoded postings + best dictionary) is approximately what fraction of the raw collection size?</div>
+    <div class="options">
+      <button class="option" onclick="answer(this,false)"><span>A.</span> ~50%</button>
+      <button class="option" onclick="answer(this,false)"><span>B.</span> ~25%</button>
+      <button class="option" onclick="answer(this,false)"><span>C.</span> ~11%</button>
+      <button class="option" onclick="answer(this,true)"><span>D.</span> ~3%</button>
+    </div>
+    <div class="explanation">(101 MB postings + 5.9 MB dictionary) / 3600 MB collection ≈ 0.03 = 3%. Even vs. text-only (960 MB) it is about 11%. This remarkable result shows that a compressed inverted index is far smaller than the collection it indexes.</div>
+  </div>
+
+  <button class="reset-btn" onclick="resetQuiz()">Reset Quiz</button>
+
+</div>
+</div>
+
+<!-- ===================== CLASSIC ===================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <!-- C1 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>1. Heaps' Law Prediction &amp; Vocabulary Growth</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> Using Heaps' law with k=44 and b=0.49 (RCV1 parameters), predict the vocabulary size for a collection of T = 10,000,000,000 (10 billion) tokens. What does this imply for IR system design?</p>
+      <p><strong>Solution:</strong></p>
+      <p>M = 44 × (10<sup>10</sup>)<sup>0.49</sup> = 44 × 10<sup>0.49 × 10</sup> = 44 × 10<sup>4.9</sup></p>
+      <p>10<sup>4.9</sup> = 10<sup>5</sup> × 10<sup>−0.1</sup> ≈ 100,000 / 1.259 ≈ 79,433</p>
+      <p>M = 44 × 79,433 ≈ <strong>3,495,000 ≈ 3.5 million distinct terms</strong></p>
+      <p><strong>Implications:</strong></p>
+      <ul>
+        <li>The vocabulary is enormous — fixed-width storage at 28 bytes × 3.5M = 98 MB just for the dictionary. String-based at 19 bytes = 66.5 MB, still large.</li>
+        <li>The vocabulary will keep growing — any new document can introduce new terms. Systems must support dynamic dictionary expansion.</li>
+        <li>Front coding and blocked storage become essential, not optional.</li>
+        <li>The vocabulary never saturates, meaning we can never cache the full dictionary in L1/L2 cache — L3 and RAM-level caching strategies are needed.</li>
+      </ul>
+      <p>Compare: RCV1 (T=1M) → M≈38K. Web-scale (T=10B) → M≈3.5M. A 10,000× larger collection only gives a ~92× larger vocabulary (T<sup>0.49</sup> grows slowly), confirming the sub-linear nature of Heaps' law.</p>
+    </div>
+  </div>
+
+  <!-- C2 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>2. Dictionary Compression: Size Calculations Step by Step</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> For RCV1 (M=400,000 terms, avg term length=8 chars), compute the dictionary size for: (a) fixed-width array, (b) dictionary-as-a-string, (c) blocked storage k=8, (d) with additional front coding saving 1.2 MB. Show all calculations.</p>
+      <p><strong>Solution:</strong></p>
+      <p><strong>(a) Fixed-width array:</strong></p>
+      <ul>
+        <li>Per entry: 20 bytes (term) + 4 bytes (doc freq) + 4 bytes (postings ptr) = 28 bytes</li>
+        <li>Total: 400,000 × 28 = <strong>11,200,000 bytes = 11.2 MB</strong></li>
+      </ul>
+      <p><strong>(b) Dictionary as a string:</strong></p>
+      <ul>
+        <li>Term string total: 400,000 × 8 = 3,200,000 bytes = 3.2 MB</li>
+        <li>Term pointer per entry: log<sub>2</sub>(3.2×10<sup>6</sup>) ≈ 22 bits → 3 bytes</li>
+        <li>Per entry: 4 (freq) + 4 (postings ptr) + 3 (term ptr) = 11 bytes overhead + 8 bytes (term chars in string)</li>
+        <li>Total: 400,000 × 11 + 3,200,000 = 4,400,000 + 3,200,000 = <strong>7,600,000 bytes = 7.6 MB</strong></li>
+        <li>Savings: 11.2 − 7.6 = 3.6 MB (32% reduction)</li>
+      </ul>
+      <p><strong>(c) Blocked storage k=8:</strong></p>
+      <ul>
+        <li>Save: (k−1) × 3 = 7 × 3 = 21 bytes per block (eliminated term pointers)</li>
+        <li>Add: k × 1 = 8 bytes per block (length bytes)</li>
+        <li>Net per block: 21 − 8 = 13 bytes. Blocks: 400,000/8 = 50,000</li>
+        <li>Total savings: 50,000 × 13 = 650,000 bytes = 0.65 MB</li>
+        <li>Size: 7.6 − 0.65 = <strong>6.95 MB ≈ 6.95 MB</strong></li>
+        <li>Alternatively: 400,000 × (4+4+3/8+1+8) = 400,000 × 17.375 = 6,950,000 bytes ✓</li>
+      </ul>
+      <p><strong>(d) With front coding:</strong></p>
+      <ul>
+        <li>Additional saving ≈ 1.2 MB</li>
+        <li>Size: 6.95 − 1.2 ≈ <strong>5.75 MB</strong> (for k=8+front coding)</li>
+        <li>For k=4 + front coding: 7.1 − 1.2 = 5.9 MB (as given in the book for k=4)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- C3 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>3. VB Encoding: Compute Codes for a Postings List</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> Consider the postings list [4, 10, 11, 12, 15, 62, 63, 265, 268, 270, 400]. The gaps are [4, 6, 1, 1, 3, 47, 1, 202, 3, 2, 130]. (a) What is the largest gap encodable in 1 byte? (b) In 2 bytes? (c) How many total bytes does VB encoding require for this list?</p>
+      <p><strong>Solution:</strong></p>
+      <p><strong>(a) Max gap in 1 byte:</strong> 7 payload bits → 2<sup>7</sup> − 1 = <strong>127</strong></p>
+      <p><strong>(b) Max gap in 2 bytes:</strong> 14 payload bits → 2<sup>14</sup> − 1 = <strong>16,383</strong></p>
+      <p><strong>(c) Byte count for each gap:</strong></p>
+      <table>
+        <tr><th>Gap</th><th>≤127?</th><th>Bytes</th><th>VB code (binary)</th></tr>
+        <tr><td>4</td><td>Yes</td><td>1</td><td>10000100</td></tr>
+        <tr><td>6</td><td>Yes</td><td>1</td><td>10000110</td></tr>
+        <tr><td>1</td><td>Yes</td><td>1</td><td>10000001</td></tr>
+        <tr><td>1</td><td>Yes</td><td>1</td><td>10000001</td></tr>
+        <tr><td>3</td><td>Yes</td><td>1</td><td>10000011</td></tr>
+        <tr><td>47</td><td>Yes</td><td>1</td><td>10101111</td></tr>
+        <tr><td>1</td><td>Yes</td><td>1</td><td>10000001</td></tr>
+        <tr><td>202</td><td>No (&gt;127)</td><td>2</td><td>00000001 11001010</td></tr>
+        <tr><td>3</td><td>Yes</td><td>1</td><td>10000011</td></tr>
+        <tr><td>2</td><td>Yes</td><td>1</td><td>10000010</td></tr>
+        <tr><td>130</td><td>No (&gt;127)</td><td>2</td><td>00000001 10000010</td></tr>
+      </table>
+      <p>Total: 9 gaps × 1 byte + 2 gaps × 2 bytes = 9 + 4 = <strong>13 bytes</strong></p>
+      <p><em>Without compression:</em> 11 docIDs × 4 bytes = 44 bytes. Compression ratio ≈ 3.4:1 for this list. Real-world lists for frequent terms achieve even better ratios.</p>
+    </div>
+  </div>
+
+  <!-- C4 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>4. γ Code Decoding: Reconstruct a Postings List</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> Decode the following γ-encoded bit string and reconstruct the postings list: <code>11100011101010111111101101111011</code></p>
+      <p><strong>Decoding rule:</strong> Count consecutive 1s until hitting a 0 → that count is the length L. Read L more bits for the offset. G = 2<sup>L</sup> + offset.</p>
+      <p><strong>Solution:</strong></p>
+      <table>
+        <tr><th>Code #</th><th>Bits consumed</th><th>Unary prefix → L</th><th>Offset bits</th><th>G = 2<sup>L</sup> + offset</th><th>Running postings</th></tr>
+        <tr><td>1</td><td>1–7</td><td>1,1,1,0 → L=3</td><td>0,0,1 = 1</td><td>8+1 = 9</td><td>9</td></tr>
+        <tr><td>2</td><td>8–12</td><td>1,1,0 → L=2</td><td>1,0 = 2</td><td>4+2 = 6</td><td>15</td></tr>
+        <tr><td>3</td><td>13–15</td><td>1,0 → L=1</td><td>1 = 1</td><td>2+1 = 3</td><td>18</td></tr>
+        <tr><td>4</td><td>16–28</td><td>1,1,1,1,1,1,0 → L=6</td><td>1,1,0,1,1,1 = 55</td><td>64+55 = 119</td><td>137</td></tr>
+        <tr><td>5</td><td>29–31</td><td>1,0 → L=1</td><td>1 = 1</td><td>2+1 = 3</td><td>140</td></tr>
+        <tr><td>(bit 32)</td><td>32</td><td colspan="4">lone '1' — incomplete code (padding or typo)</td></tr>
+      </table>
+      <p><strong>Gap sequence:</strong> 9, 6, 3, 119, 3</p>
+      <p><strong>Postings sequence:</strong> 9, 15, 18, 137, 140</p>
+      <p><em>Note:</em> The prefix-free property means we can decode unambiguously without delimiters — the unary length prefix tells us exactly how many offset bits follow each code.</p>
+    </div>
+  </div>
+
+  <!-- C5 -->
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>5. VB vs. γ vs. δ: Comparison and When to Use Each</span>
+      <span class="classic-chevron">›</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Question:</strong> Compare VB, γ, and δ codes on compression ratio, decoding speed, and practical applicability. Give actual sizes for RCV1. For the gap G=511, compute the γ code and δ code, and compare their lengths.</p>
+      <p><strong>Solution — RCV1 sizes:</strong></p>
+      <table>
+        <tr><th>Method</th><th>RCV1 postings</th><th>vs. uncompressed (250 MB)</th></tr>
+        <tr><td>Uncompressed (20-bit)</td><td>250 MB</td><td>—</td></tr>
+        <tr><td>Uncompressed (32-bit)</td><td>400 MB</td><td>—</td></tr>
+        <tr><td>VB codes</td><td>116 MB</td><td>54% reduction</td></tr>
+        <tr><td>γ codes</td><td>101 MB</td><td>60% reduction</td></tr>
+      </table>
+      <p><strong>γ code for G=511:</strong></p>
+      <ul>
+        <li>Binary(511) = 111111111 (9 bits). Offset = 11111111 (8 bits). Length = 8.</li>
+        <li>Unary(8) = 111111110 (nine characters: eight 1s then a 0).</li>
+        <li>γ(511) = 111111110,11111111 = <strong>17 bits</strong></li>
+      </ul>
+      <p><strong>δ code for G=511:</strong></p>
+      <ul>
+        <li>L = 8. γ(8): binary(8)=1000, offset=000 (3 bits), length=3, unary(3)=1110. γ(8) = 1110,000 = <strong>7 bits</strong>.</li>
+        <li>δ(511) = γ(8) + offset = 1110000,11111111 = <strong>15 bits</strong></li>
+        <li>δ saves 2 bits vs. γ for G=511. For G=1025: δ saves 4 bits.</li>
+      </ul>
+      <p><strong>Practical guidance:</strong></p>
+      <ul>
+        <li><strong>VB codes:</strong> Byte-aligned → no bit manipulation → simple, fast. Most real-world IR systems (Lucene, etc.) use VB or a variant. Choose when query throughput &gt; space savings.</li>
+        <li><strong>γ codes:</strong> Best compression for collections with many frequent terms (small gaps dominate). Parameter-free, universal. Choose when storage is the bottleneck and queries are infrequent.</li>
+        <li><strong>δ codes:</strong> Best for large gaps (rare terms, web-scale collections). Strictly better than γ for G≥3 in most cases. Choose for very large, skewed collections.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div style="text-align:center;color:#888;font-size:.82rem;padding:32px 0">
+  CSE 422 · Acibadem University · Manning et al. — Introduction to Information Retrieval
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+let score = 0, answered = 0;
+const total = 15;
+
+function answer(btn, correct) {
+  const opts = btn.closest('.options').querySelectorAll('.option');
+  if (btn.disabled) return;
+  opts.forEach(o => o.disabled = true);
+  if (correct) {
+    btn.classList.add('correct');
+    score++;
+  } else {
+    btn.classList.add('wrong');
+    opts.forEach(o => { if (o.onclick.toString().includes('true')) o.classList.add('correct'); });
+  }
+  btn.closest('.q-card').querySelector('.explanation').classList.add('show');
+  answered++;
+  document.getElementById('scoreVal').textContent = score + ' / ' + total;
+  document.getElementById('scoreFill').style.width = (score / total * 100) + '%';
+}
+
+function resetQuiz() {
+  score = 0; answered = 0;
+  document.getElementById('scoreVal').textContent = '0 / ' + total;
+  document.getElementById('scoreFill').style.width = '0%';
+  document.querySelectorAll('.option').forEach(o => {
+    o.disabled = false;
+    o.classList.remove('correct', 'wrong');
+  });
+  document.querySelectorAll('.explanation').forEach(e => e.classList.remove('show'));
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
+</script>
+</body>
+</html>
