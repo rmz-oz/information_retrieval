@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch9: Relevance Feedback &amp; Query Expansion</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none;padding:0}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:100px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 16px;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 9: Relevance Feedback &amp; Query Expansion</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ==================== LESSON ==================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 9.1 -->
+  <div class="card">
+    <h2>9.1 Relevan Geri Besleme (Relevance Feedback)</h2>
+    <p>Kullanıcı, ilk sorgu sonuçlarını değerlendirerek sisteme geri bildirim verir. Sistem bu geri bildirimi kullanarak sorguyu iyileştirir ve daha iyi sonuçlar döndürür.</p>
+
+    <h3>Temel Süreç</h3>
+    <div class="flow">
+      <div class="flow-box">Kullanıcı Sorgu Yazar</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Sistem İlk Sonuçları Döndürür</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Kullanıcı R/NR İşaretler</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Sistem Sorguyu İyileştirir</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Yeni Sonuçlar</div>
+    </div>
+
+    <div class="info-box">
+      <strong>Temel Fikir</strong>
+      Koleksiyonu iyi bilmeden iyi bir sorgu yazmak zordur, ama belirli belgeleri değerlendirmek kolaydur. Yinelemeli sorgu geliştirme bu asimetriyi kullanır.
+    </div>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Yöntemlerin Sınıflandırılması</h4>
+        <strong>Lokal yöntemler:</strong> Döndürülen belgelere göre sorgu ayarlanır (RF, pseudo RF).<br>
+        <strong>Global yöntemler:</strong> Sorgu ve sonuçlardan bağımsız, koleksiyon genelinde terim ilişkileri kullanılır (thesaurus).
+      </div>
+      <div class="g-card">
+        <h4>Synonymy Problemi</h4>
+        "aircraft" araması "plane" içeren belgeleri kaçırır; "thermodynamics" araması "heat" içerenleri. Sorgu genişletme bu problemi çözer.
+      </div>
+    </div>
+  </div>
+
+  <!-- 9.2 -->
+  <div class="card card-teal">
+    <h2>9.2 Rocchio Algoritması</h2>
+    <p>Rocchio, relevan geri beslemeyi vektör uzay modeline entegre eden klasik algoritmadır. Yeni sorgu vektörü şöyle hesaplanır:</p>
+
+    <pre><code>q_m = α·q_0 + β·(1/|D_r|)·Σ(d∈D_r) d - γ·(1/|D_nr|)·Σ(d∈D_nr) d
+
+q_0   : orijinal sorgu vektörü
+q_m   : yeni (modified) sorgu vektörü
+D_r   : kullanıcının relevan olarak işaretlediği belgeler
+D_nr  : kullanıcının non-relevan olarak işaretlediği belgeler
+α, β, γ : ağırlık parametreleri</code></pre>
+
+    <h3>Sezgisel Yorum</h3>
+    <div class="grid3">
+      <div class="g-card">
+        <h4>α terimi</h4>
+        Orijinal sorgu ağırlığı. Sorguyu başlangıç noktasına bağlar. Tipik: α=1.
+      </div>
+      <div class="g-card">
+        <h4>β terimi (+)</h4>
+        Relevan belgelerin ağırlık merkezine doğru çek. Relevan belgelerdeki terimler boost edilir. Tipik: β=0.75.
+      </div>
+      <div class="g-card">
+        <h4>γ terimi (−)</h4>
+        Non-relevan belgelerin ağırlık merkezinden uzaklaş. Bu terimlerin etkisi azaltılır. Tipik: γ=0.15.
+      </div>
+    </div>
+
+    <div class="warning-box">
+      <strong>Önemli Kural</strong>
+      Negatif terimler (γ) genellikle α ve β'dan çok daha küçük tutulur. Kullanıcılar hangi belgelerin alakasız olduğunu belirlemekte less accurate'dir. Pratikte γ=0 (yalnızca pozitif RF) bile iyi sonuç verir.
+    </div>
+
+    <h3>Örnek: "New space satellite applications"</h3>
+    <p>Kullanıcı başlangıçta "new space satellite applications" sorgusunu girer. 3 belgeyi relevan işaretler. Rocchio ile "nasa", "eos", "launch", "instrument" gibi terimler sorguya eklenir → precision artar.</p>
+  </div>
+
+  <!-- 9.3 -->
+  <div class="card card-purple">
+    <h2>9.3 Pseudo Relevance Feedback (Kör RF)</h2>
+    <p>Kullanıcı geri bildirimi olmadan otomatik RF. Sistem, ilk sorgunun top-k sonucunu otomatik olarak relevan kabul eder ve Rocchio'yu uygular.</p>
+
+    <h3>Algoritma</h3>
+    <ol>
+      <li>Kullanıcı sorguyu girer.</li>
+      <li>Sistem ilk sonuçları hesaplar.</li>
+      <li>Top-k belge (k=10-50 tipik) otomatik olarak "relevan" kabul edilir.</li>
+      <li>Rocchio algoritması uygulanır, sorgu güncellenir.</li>
+      <li>Yeni sorgu ile nihai sonuçlar döndürülür.</li>
+    </ol>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Avantaj</h4>
+        Kullanıcı etkileşimi gerektirmez. Tam otomatik. Büyük koleksiyonlarda precision artışı sağlar.
+      </div>
+      <div class="g-card">
+        <h4>Dezavantaj</h4>
+        Başlangıç sonuçları kötüyse hata büyüyebilir (query drift). "Kör" feedback her zaman işe yaramaz.
+      </div>
+    </div>
+
+    <div class="danger-box">
+      <strong>Query Drift Riski</strong>
+      İlk sonuçlar doğru konudan uzaksa pseudo RF yanlış yöne doğru sorguyu çeker. Her iterasyonda hata birikerek "query drift" oluşabilir.
+    </div>
+  </div>
+
+  <!-- 9.4 -->
+  <div class="card card-amber">
+    <h2>9.4 Global Yöntemler: Query Expansion</h2>
+    <p>Sorgu bağımsız (global) yöntemler, koleksiyon veya dış kaynaklar kullanarak terimleri genişletir.</p>
+
+    <h3>Thesaurus Tabanlı Genişletme</h3>
+    <p>Manuel veya otomatik oluşturulmuş bir eşanlamlılar sözlüğü kullanılır:</p>
+    <ul>
+      <li><strong>WordNet:</strong> İngilizce için büyük lexical database. Synset'ler (eşanlamlı kümeler) kullanılır.</li>
+      <li><strong>Manuel Thesaurus:</strong> Alan uzmanları tarafından hazırlanmış (MeSH medikal thesaurus gibi).</li>
+      <li><strong>Otomatik Thesaurus:</strong> Birlikte oluşan terimlerden istatistiksel olarak öğrenilir.</li>
+    </ul>
+
+    <div class="success-box">
+      <strong>Örnek</strong>
+      "aircraft" sorgusu → thesaurus → {"plane", "jet", "airplane", "airliner"} eklenir. Bu terimlerden herhangi birini içeren belgeler de sonuçlara dahil edilir.
+    </div>
+
+    <h3>Query Log Tabanlı Genişletme</h3>
+    <p>Arama motorları, önceki kullanıcı sorgularını analiz eder. Birlikte yapılan sorgular veya ardışık sorgular benzer amacı paylaşır.</p>
+    <ul>
+      <li>"dvd player" arayan kullanıcılar genellikle "dvd recorder" da arıyor → ilişkili terimler.</li>
+      <li>Clickthrough verisi: aynı sonuçlara tıklayan kullanıcıların sorguları benzer anlamdadır.</li>
+    </ul>
+
+    <h3>Global Yöntemlerin Karşılaştırması</h3>
+    <table>
+      <tr><th>Yöntem</th><th>Kaynak</th><th>Avantaj</th><th>Dezavantaj</th></tr>
+      <tr><td>Manuel Thesaurus</td><td>Domain uzmanları</td><td>Yüksek kalite</td><td>Pahalı, alan-özgü</td></tr>
+      <tr><td>WordNet</td><td>Dil veritabanı</td><td>Genel amaçlı</td><td>Polysemy sorunu</td></tr>
+      <tr><td>Otomatik Thesaurus</td><td>Koleksiyondan öğrenme</td><td>Alan-adaptif</td><td>Gürültülü olabilir</td></tr>
+      <tr><td>Query Logs</td><td>Kullanıcı davranışı</td><td>Çok etkili (web)</td><td>Büyük veri gerekir</td></tr>
+    </table>
+  </div>
+
+  <!-- 9.5 -->
+  <div class="card card-red">
+    <h2>9.5 Rocchio'nun Değerlendirmesi ve Sınırları</h2>
+
+    <h3>Relevan Feedback'in Başarılı Olduğu Durumlar</h3>
+    <ul>
+      <li>Kullanıcının bilgi ihtiyacı iyi tanımlanmış ama ifadesi zor olduğunda.</li>
+      <li>Koleksiyonda benzer konulu belgeler bir küme oluşturduğunda.</li>
+      <li>Kullanıcı birden fazla alakalı belgeyi işaretleyebildiğinde.</li>
+    </ul>
+
+    <h3>Relevan Feedback'in Başarısız Olduğu Durumlar</h3>
+    <ul>
+      <li><strong>Polysemy:</strong> "bank" kelimesi hem finansal banka hem de nehir kıyısı anlamına gelir → yanlış terimler eklenir.</li>
+      <li><strong>Spelling variants:</strong> Farklı yazım biçimleri.</li>
+      <li><strong>Cross-language retrieval:</strong> Farklı dillerdeki belgeler.</li>
+    </ul>
+
+    <div class="info-box">
+      <strong>Evaluation Challenge</strong>
+      Relevan feedback'i değerlendirmek zordur: kullanıcı ilk turda bazı belgeleri görüp işaretlediği için, ikinci tur sonuçlarını ilk tur sonuçlarıyla doğrudan karşılaştırmak adil değildir. Residual collection yöntemi kullanılır: feedback'te kullanılan belgeler değerlendirme dışında bırakılır.
+    </div>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card" style="background:#1a3a6e;color:#fff;border:none">
+    <h2 style="color:#fff;border-bottom-color:rgba(255,255,255,.2)">Hızlı Başvuru Kartı</h2>
+    <table style="color:#e0e8f8">
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Relevance Feedback</strong></td><td>Kullanıcı R/NR işaretler → sorgu güncellenir (iteratif)</td></tr>
+      <tr><td><strong>Rocchio</strong></td><td>q_m = α·q₀ + β·centroid(D_r) − γ·centroid(D_nr)</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>α, β, γ</strong></td><td>Tipik: α=1, β=0.75, γ=0.15 (negatif küçük tutulur)</td></tr>
+      <tr><td><strong>Pseudo RF</strong></td><td>Top-k otomatik "relevan" kabul → kör RF, query drift riski</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Global Yöntemler</strong></td><td>Thesaurus, WordNet, query logs — sorgudan bağımsız</td></tr>
+      <tr><td><strong>Local Yöntemler</strong></td><td>RF, pseudo RF — döndürülen belgelere bağımlı</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Synonymy</strong></td><td>Aynı kavram farklı terimler → recall düşer → query exp. çözer</td></tr>
+      <tr><td><strong>Query Drift</strong></td><td>Pseudo RF'de başlangıç hatasının büyümesi riski</td></tr>
+    </table>
+  </div>
+
+</div>
+</div><!-- /lesson -->
+
+<!-- ==================== QUIZ ==================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Skor</span>
+    <div class="score-track"><div class="score-fill" id="scoreBar" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Başla</button>
+</div>
+</div>
+
+<!-- ==================== CLASSIC ==================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="info-box" style="margin-bottom:24px">
+    <strong>Nasıl Çalışır?</strong>
+    Her sorunun başlığına tıkla → Soruyu gör ve kendi cevabını düşün → Tekrar tıkla → Model cevabı aç.
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — Rocchio Algoritması Hesaplama</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> α=1, β=0.75, γ=0.25. Orijinal sorgu: q₀=(1,0,1). Relevan belgeler: d1=(1,1,0), d2=(0,1,1). Non-relevan belgeler: d3=(1,0,0). Yeni sorgu vektörünü hesaplayın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <pre><code>centroid(D_r)  = (d1 + d2) / 2 = ((1,1,0) + (0,1,1)) / 2 = (0.5, 1.0, 0.5)
+centroid(D_nr) = d3 = (1, 0, 0)
+
+q_m = α·q₀ + β·centroid(D_r) − γ·centroid(D_nr)
+    = 1·(1,0,1) + 0.75·(0.5,1.0,0.5) − 0.25·(1,0,0)
+    = (1, 0, 1) + (0.375, 0.75, 0.375) − (0.25, 0, 0)
+    = (1 + 0.375 − 0.25,  0 + 0.75 − 0,  1 + 0.375 − 0)
+    = (1.125, 0.75, 1.375)</code></pre>
+      <div class="success-box">İkinci bileşen (0→0.75): Relevan belgelerden gelen "term 2" eklendi. Birinci bileşen non-relevan belgeden küçük bir azalma aldı.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — Pseudo RF ve Query Drift</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> "jaguar" sorgusu bir arama motoruna girildi. Top-5 sonuç: 3 belge araba markası, 2 belge hayvan hakkında. Pseudo RF uygulandı (k=5). (a) Query drift oluşur mu? (b) Bunu nasıl önlersiniz?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) Evet, query drift oluşur.</strong> Kullanıcı hayvan anlamını istiyorsa, pseudo RF ilk 5 sonuçtaki araba terimlerini (Jaguar, XF, XE, sedan, model) sorguya ekler. Bu, ikinci turda daha da fazla araba sonucu getirir — yanlış yöne drift.</p>
+      <p><strong>(b) Önleme yolları:</strong></p>
+      <ul>
+        <li>Disambiguation yaparak hangi anlamın istendiğini sor.</li>
+        <li>k değerini küçük tut (k=3) → daha az gürültülü feedback.</li>
+        <li>Tek bir dominant konu tespit edilmişse (inter-topic consistency düşük) pseudo RF'yi uygulama.</li>
+        <li>Kullanıcıya ara sonuçları göster → gerçek RF yap.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — Global vs Lokal Yöntemler</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Bir medikal IR sistemi "heart attack" sorgusuna "myocardial infarction" içeren belgeleri de döndürmek istiyor. Hangi yöntemi kullanırsınız? Global mi, lokal mi? Avantaj ve dezavantajlarını açıklayın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Tercih: Global yöntem — MeSH thesaurus kullanımı.</strong></p>
+      <p><strong>Neden global?</strong> Medikal terminoloji çok spesifik ve standart. "myocardial infarction" = "heart attack" ilişkisi evrensel ve alan uzmanları tarafından belgelenmiş. Lokal RF bunu öğrenemez çünkü kullanıcı hangi belgelerin alakalı olduğunu bilmeden başlar.</p>
+      <div class="success-box">
+        <strong>MeSH (Medical Subject Headings):</strong> NLM tarafından hazırlanmış kapsamlı medikal thesaurus. "heart attack" → ["myocardial infarction", "cardiac arrest", "coronary thrombosis"] genişletmesi yapılabilir.
+      </div>
+      <p><strong>Dezavantaj:</strong> Manuel thesaurus'lar pahalıdır, alan-özgüdür ve güncel tutulması zordur. Yeni terminoloji otomatik eklenemez.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — Rocchio'nun γ=0 Durumu</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Rocchio algoritmasında γ=0 (yani non-relevan belgeler görmezden gelinirse) ne anlama gelir? Bu pratikte makul bir seçim midir? Ne zaman γ&gt;0 tercih edilir?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>γ=0 anlamı:</strong> Sorgu yalnızca orijinal sorgu ve relevan belgelerin centroid'ine doğru kayar; non-relevan belgelerden uzaklaşma yapılmaz.</p>
+      <p><strong>Pratikte makul mü?</strong> Genellikle evet. Nedenler:</p>
+      <ul>
+        <li>Kullanıcılar "bu alakasız" işaretlemeyi daha az yapar — daha az güvenilir veri.</li>
+        <li>Non-relevan belgeler çok çeşitli olabilir → centroid anlamsız.</li>
+        <li>Negatif ağırlıklar negatif tf-idf değerleri üretebilir → sıfırlanması gerekir.</li>
+      </ul>
+      <p><strong>γ&gt;0 tercih edildiğinde:</strong> Kullanıcı açıkça "bu konuyu istemiyorum" diyorsa (örn. "Obama" aramasında "Michelle Obama" belgelerini non-relevan işaretlerse) γ&gt;0 ile bu konudan uzaklaşılır.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — Query Expansion Değerlendirmesi</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> WordNet ile "car" sorgusunu genişletince {"automobile", "auto", "motorcar", "machine", "car"} elde edildi. Bu genişletme her zaman iyi sonuç verir mi? Polysemy sorununu açıklayın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Sorun: Polysemy (çok anlamlılık).</strong></p>
+      <p>WordNet'te "machine" hem "car" ile hem de "computer machine", "sewing machine", "washing machine" ile ilişkilidir. "car" genişletmesine "machine" eklenirse:</p>
+      <ul>
+        <li>Bilgisayar hakkındaki belgeler de sonuçlara girer → precision düşer.</li>
+        <li>Kullanıcı araba aramasında çamaşır makinesi makalesini görür.</li>
+      </ul>
+      <div class="warning-box">
+        <strong>Polysemy çözümü:</strong> Word Sense Disambiguation (WSD) ile hangi anlamın kullanıldığı tespit edilebilir. Ama WSD zordur ve yüksek hesaplama maliyeti gerektirir. Bu yüzden birçok sistem WordNet genişletmesini kontrollü (sadece doğrudan sinonimler) yapar.
+      </div>
+      <p>Alternatif: Otomatik thesaurus — aynı koleksiyondaki birlikte oluşan terimler kullanılırsa alan-özgü anlamlar korunur (domain-specific co-occurrence).</p>
+    </div>
+  </div>
+
+</div>
+</div><!-- /classic -->
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+const questions = [
+  {
+    q: "Relevance feedback'in temel fikri nedir?",
+    opts: ["Sorguyu otomatik olarak genişletmek","Kullanıcının ilk sonuçlardaki belgeleri değerlendirmesiyle sorguyu iyileştirmek","Koleksiyonu yeniden index'lemek","Tüm belgeleri tek tek skorlamak"],
+    ans: 1,
+    exp: "RF: kullanıcı ilk sonuçları görür, R/NR işaretler. Sistem bu geri bildirimi kullanarak sorguyu günceller ve daha iyi ikinci tur sonuçlar döndürür. Koleksiyonu bilmeden iyi sorgu yazmak zordur ama belge değerlendirmek kolaydır."
+  },
+  {
+    q: "Rocchio algoritmasında β terimi ne anlama gelir?",
+    opts: ["Orijinal sorgunun ağırlığı","Non-relevan belgelerin centroid'ine doğru çekme kuvveti","Relevan belgelerin centroid'ine doğru çekme kuvveti","Sorgunun toplam normu"],
+    ans: 2,
+    exp: "β: relevan belgelerin centroid'ini sorguya ekleme ağırlığı. Yüksek β → sorgu, relevan belgelerin terim dağılımına yaklaşır. Tipik β=0.75. Relevan belgelerdeki terimler yüksek ağırlık alır."
+  },
+  {
+    q: "Rocchio'da γ neden α ve β'dan çok daha küçük tutulur?",
+    opts: ["Non-relevan belgeler daha az önemlidir","Non-relevan belgeler çok çeşitli olabilir ve centroid'leri anlamsız olabilir; ayrıca kullanıcılar NR işaretlemede daha az güvenilirdir","Matematiksel zorunluluk gereği","Non-relevan belgeler precision'ı etkiler, recall'ı etkilemez"],
+    ans: 1,
+    exp: "Kullanıcılar non-relevan işaretlemede daha az dikkatlidir. NR belgeler çok çeşitli → centroid anlamsız. Negatif ağırlıklar negatif tf değerleri üretebilir → sıfırlanır. Bu yüzden γ küçük (örn. 0.15) veya sıfır tutulur."
+  },
+  {
+    q: "Pseudo relevance feedback (kör RF) ne yapar?",
+    opts: ["Kullanıcıya geri bildirim formu gösterir","İlk sorgunun top-k sonucunu otomatik olarak relevan kabul eder ve RF uygular","Tüm belgeleri eşit ağırlıkla relevan kabul eder","Sadece tek turlu arama yapar"],
+    ans: 1,
+    exp: "Pseudo RF: kullanıcı yokken top-k belge otomatik 'relevan' sayılır. Rocchio uygulanır, sorgu güncellenir. Avantaj: tam otomatik. Dezavantaj: ilk sonuçlar kötüyse query drift oluşur."
+  },
+  {
+    q: "Query drift nedir?",
+    opts: ["Sorgunun çok uzun olması","Pseudo RF'de başlangıç hatalarının birikip sorgunun yanlış yöne kayması","Kullanıcının sorgusunu değiştirmesi","Index'in güncel olmaması"],
+    ans: 1,
+    exp: "Query drift: pseudo RF'de ilk sonuçlar yanlış konudaysa, o konunun terimleri sorguya eklenir. İkinci tur daha da yanlış. Iterasyonla hata büyür. Örn: 'jaguar' arama → araba sonuçları → araba terimleri eklenir → daha fazla araba."
+  },
+  {
+    q: "Global ve lokal yöntemler arasındaki temel fark nedir?",
+    opts: ["Global yöntemler daha hızlıdır","Global yöntemler sorgu ve döndürülen belgelerden bağımsız koleksiyon geneli ilişkiler kullanır; lokal yöntemler döndürülen belgelere göre sorguyu ayarlar","Lokal yöntemler precision'ı, global yöntemler recall'ı optimize eder","Global yöntemler sadece web arama için kullanılır"],
+    ans: 1,
+    exp: "Global: thesaurus, WordNet, query logs — sorgudan bağımsız, koleksiyon geneli. Lokal: RF, pseudo RF — döndürülen belgelere göre uyarlanır. İkisi birbirini tamamlayıcıdır."
+  },
+  {
+    q: "WordNet nedir ve query expansion'da nasıl kullanılır?",
+    opts: ["Web belgelerini index'leyen bir sistem","İngilizce için synset'ler (eşanlamlı kümeler) içeren lexical veritabanı; sorgu terimlerinin eşanlamlıları eklenerek sorgu genişletilir","Sorgu loglarını analiz eden bir araç","Makine öğrenmesi tabanlı bir dil modeli"],
+    ans: 1,
+    exp: "WordNet: İngilizce kelimeler için synset (synonym set) içerir. 'car' → {automobile, auto, motorcar}. Sorgu genişletmede bu eşanlamlılar sorguya eklenir → daha fazla belge eşleşir. Sorun: polysemy (çok anlamlı kelimeler yanlış genişleme üretebilir)."
+  },
+  {
+    q: "Synonymy problemi IR'de nasıl bir etkiye sahiptir?",
+    opts: ["Precision düşer","Recall düşer — aynı kavramı farklı terimlerle ifade eden belgeler kaçırılır","Index boyutu büyür","Sorgu süresi uzar"],
+    ans: 1,
+    exp: "Synonymy: aynı kavram farklı kelimelerle ifade edilir. 'aircraft' araması 'plane' içeren belgeleri bulamaz. Bu recall'ı düşürür. Query expansion (global yöntemler) bu sorunu çözer: eşanlamlılar sorguya eklenir."
+  },
+  {
+    q: "Rocchio'da α=0 yapılırsa ne olur?",
+    opts: ["Non-relevan belgeler görmezden gelinir","Orijinal sorgu tamamen yok sayılır; yeni sorgu yalnızca relevan/NR belgelerden oluşur","Relevan belgeler görmezden gelinir","Sorgu değişmez"],
+    ans: 1,
+    exp: "α=0: q_m = β·centroid(D_r) − γ·centroid(D_nr). Orijinal sorgu hiç katkıda bulunmaz. Bu, yeni sorgunun tamamen feedback'e dayanması demektir — genellikle tavsiye edilmez çünkü orijinal bilgi ihtiyacından çok uzaklaşabilir."
+  },
+  {
+    q: "Residual collection yöntemi neden kullanılır?",
+    opts: ["Index boyutunu küçültmek için","RF değerlendirmesinde: feedback'te kullanılan belgeler değerlendirme dışında bırakılır, böylece adil karşılaştırma sağlanır","Pseudo RF'de kullanılmayan belgeleri filtrelemek için","Query drift'i önlemek için"],
+    ans: 1,
+    exp: "RF değerlendirmesi zordur: kullanıcı ilk turda bazı belgeleri gördü. Bunlar ikinci turda yeniden döndürülürse 'zaten bilinen' belgeler sistemi daha iyi gösterir. Residual collection: feedback'te gösterilen belgeler test setinden çıkarılır."
+  },
+  {
+    q: "Otomatik thesaurus oluşturmada hangi ilke kullanılır?",
+    opts: ["Manuel olarak belirlenen kural tabanlı ilişkiler","Aynı koleksiyonda birlikte sıkça geçen terimler ilişkili kabul edilir","PageRank algoritması ile terim önemi belirlenir","Alfabetik sıralama ile terimler eşleştirilir"],
+    ans: 1,
+    exp: "Otomatik thesaurus: aynı belgelerde birlikte geçen (co-occurring) terimler benzer konuya işaret eder. Pearson korelasyonu veya mutual information gibi metrikler kullanılır. Alan-özgü ama gürültülü olabilir."
+  },
+  {
+    q: "Query log tabanlı genişletme nasıl çalışır?",
+    opts: ["Sorgular alphabetik olarak sıralanır","Benzer sorgular veya aynı sonuçlara tıklayan kullanıcıların sorgularından ilişkili terimler öğrenilir","Tüm sorgular otomatik olarak birleştirilir","Sorgu geçmişi arama kalıplarını tespit etmek için kullanılır"],
+    ans: 1,
+    exp: "Query logs: 'dvd player' arayan kullanıcılar sonra 'dvd recorder' arıyorsa bu kelimeler ilişkilidir. Aynı sonuçlara tıklayan kullanıcıların farklı sorgularından semantik benzerlik öğrenilir. Web arama motorlarında çok etkili."
+  },
+  {
+    q: "Relevance feedback hangi durumda en başarılıdır?",
+    opts: ["Kullanıcı tamamen yanlış bir sorgu yazdığında","Kullanıcının bilgi ihtiyacı iyi tanımlanmış ama ifadesi zor olduğunda; koleksiyonda benzer belgeler küme oluşturduğunda","Koleksiyonda sadece bir ilgili belge olduğunda","Non-relevan belgeler çok fazla olduğunda"],
+    ans: 1,
+    exp: "RF en iyi: (1) Bilgi ihtiyacı var ama doğru kelimeler bilinmiyor — ilk sonuçlardaki terimler sorguyu geliştirir. (2) Koleksiyonda konu kümesi oluşmuşsa — relevan belgelerin centroid'i anlamlıdır. (3) Kullanıcı birden fazla belgeyi işaretleyebildiğinde."
+  },
+  {
+    q: "Polysemy hangi query expansion sorununa yol açar?",
+    opts: ["Recall çok düşük kalır","Yanlış anlamlardaki terimler eklenerek precision düşer","Sorgu çok kısa kalır","Index çok büyür"],
+    ans: 1,
+    exp: "Polysemy: 'bank' hem finansal banka hem nehir kıyısı. 'bank' sorgusunu 'river bank' ile genişletmek finansal belgeler arayan kullanıcıya yanlış sonuçlar getirir. Precision düşer. WSD (Word Sense Disambiguation) bu sorunu çözmeye çalışır."
+  },
+  {
+    q: "MeSH hangi alan için ve nasıl kullanılan bir thesaurus'tur?",
+    opts: ["Hukuk alanı için otomatik thesaurus","Medikal alan için NLM tarafından hazırlanmış manuel thesaurus; 'heart attack' → 'myocardial infarction' gibi medikal eşanlamlılar içerir","Bilgisayar bilimi için query log tabanlı genişletme aracı","Web aramaları için Google tarafından geliştirilen otomatik thesaurus"],
+    ans: 1,
+    exp: "MeSH (Medical Subject Headings): NLM (National Library of Medicine) tarafından hazırlanan medikal thesaurus. Standart medikal terminoloji eşleşmeleri içerir. 'heart attack' = 'myocardial infarction' ilişkisi MeSH'te kodlanmıştır."
+  }
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  const c = document.getElementById('quizContainer');
+  c.innerHTML = '';
+  score = 0; answered = 0;
+  updateScore();
+  questions.forEach((q, qi) => {
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;min-width:18px">${['A','B','C','D'][oi]})</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    c.innerHTML += `
+      <div class="q-card" id="qcard_${qi}">
+        <div class="q-num">Soru ${qi+1} / 15</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}"><strong>Açıklama:</strong> ${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(o => o.disabled = true);
+  const selected = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) { selected.classList.add('correct'); score++; }
+  else { selected.classList.add('wrong'); correct.classList.add('correct'); }
+  answered++;
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('scoreBar').style.width = pct + '%';
+  document.getElementById('scoreVal').textContent = `${score} / ${questions.length}`;
+}
+
+function resetQuiz() { buildQuiz(); }
+buildQuiz();
+</script>
+</body>
+</html>

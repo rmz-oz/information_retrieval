@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch8: IR Evaluation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none;padding:0}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .tab-btn{padding:12px 16px;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 8: IR Evaluation</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ==================== LESSON ==================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 8.1 -->
+  <div class="card">
+    <h2>8.1 Precision, Recall ve Contingency Table</h2>
+    <p>IR sistemlerini değerlendirmek için temel metrik çifti <strong>Precision (P)</strong> ve <strong>Recall (R)</strong>'dır. Bunlar contingency table (karmaşıklık tablosu) üzerinden tanımlanır:</p>
+
+    <table>
+      <tr><th></th><th>Relevant (Alakalı)</th><th>Nonrelevant (Alakasız)</th></tr>
+      <tr><td><strong>Retrieved (Alınan)</strong></td><td>TP (True Positive)</td><td>FP (False Positive)</td></tr>
+      <tr><td><strong>Not Retrieved (Alınmayan)</strong></td><td>FN (False Negative)</td><td>TN (True Negative)</td></tr>
+    </table>
+
+    <pre><code>Precision  = TP / (TP + FP)    ← alınanların ne kadarı alakalı?
+Recall     = TP / (TP + FN)    ← alakalıların ne kadarı alındı?
+Accuracy   = (TP + TN) / N     ← IR'de genellikle kullanılmaz (TN çok büyük)</code></pre>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Precision ne zaman kritik?</h4>
+        FP'nin maliyeti yüksekse: spam tespiti (önemli e-posta spam sayılmamalı), hukuk araştırması.
+      </div>
+      <div class="g-card">
+        <h4>Recall ne zaman kritik?</h4>
+        FN'nin maliyeti yüksekse: medikal tanı (hasta kaçırılmamalı), patent araştırması.
+      </div>
+    </div>
+
+    <div class="warning-box">
+      <strong>Neden Accuracy IR'de Kullanılmaz?</strong>
+      1M belgeli koleksiyonda 50 alakalı belge varken sistem hiçbirini getirmese: Accuracy = (0 + 999.950) / 1.000.000 = %99.995! TN çok büyük olduğundan accuracy yanıltıcıdır.
+    </div>
+  </div>
+
+  <!-- 8.2 -->
+  <div class="card card-teal">
+    <h2>8.2 F Ölçüsü (F-Measure)</h2>
+    <p>Precision ve Recall'ı tek bir sayıya indirgemek için <strong>harmonik ortalama</strong> kullanılır:</p>
+
+    <pre><code>F = (β² + 1) · P · R / (β² · P + R)
+
+β = 1 → F₁ (dengeli):  F₁ = 2PR / (P + R)
+β &lt; 1 → Precision ağırlıklı
+β &gt; 1 → Recall ağırlıklı</code></pre>
+
+    <h3>Neden Aritmetik Ortalama Değil?</h3>
+    <table>
+      <tr><th>Precision</th><th>Recall</th><th>Aritmetik Ortalama</th><th>F₁ (Harmonik)</th></tr>
+      <tr><td>1.0</td><td>0.0</td><td>0.50</td><td>0.00</td></tr>
+      <tr><td>0.9</td><td>0.1</td><td>0.50</td><td>0.18</td></tr>
+      <tr><td>0.5</td><td>0.5</td><td>0.50</td><td>0.50</td></tr>
+    </table>
+
+    <div class="success-box">
+      <strong>Harmonik Ortalamanın Avantajı</strong>
+      P=1, R=0 durumunda sistem hiçbir alakalı belge getirmemiştir — tamamen başarısız. Harmonik ortalama bunu 0 ile cezalandırır. Aritmetik ortalama yanıltıcı biçimde 0.5 verir.
+    </div>
+
+    <h3>Dice Katsayısı ile İlişkisi</h3>
+    <pre><code>Dice(X, Y) = 2|X ∩ Y| / (|X| + |Y|)
+
+F₁ = Dice(alınan belgeler, alakalı belgeler)</code></pre>
+  </div>
+
+  <!-- 8.3 -->
+  <div class="card card-purple">
+    <h2>8.3 Sıralı Geri Çağırma Değerlendirmesi</h2>
+    <p>Precision ve Recall set-tabanlıdır (sıralamayı dikkate almaz). Sıralı sonuçlar için ek metrikler gerekir.</p>
+
+    <h3>Precision@k (P@k)</h3>
+    <pre><code>P@k = (top-k'daki alakalı belge sayısı) / k</code></pre>
+    <p>Sabit bir cutoff değeri kullanır. Basit ve pratik (arama motorunun ilk sayfası). Dezavantaj: her sorgu için aynı k → bazı sorgularda adil değil.</p>
+
+    <h3>R-Precision</h3>
+    <pre><code>R-Precision = (top-R'deki alakalı belge sayısı) / R
+R = koleksiyondaki toplam alakalı belge sayısı</code></pre>
+    <p>Cutoff, sorguya göre uyarlanır: R=2 olan zor sorguda top-2, R=50 olan kolay sorguda top-50 değerlendirilir. Sorgular arası adil karşılaştırma sağlar.</p>
+
+    <div class="info-box">
+      <strong>Break-Even Point (BEP)</strong>
+      Precision = Recall olduğu nokta. R-Precision bu noktanın iyi bir tahminidir çünkü rank R'de P(R) = Rec(R) = r/R eşitliği sağlanır.
+    </div>
+
+    <h3>Precision-Recall Eğrisi</h3>
+    <p>Farklı eşik değerleri için (P, R) çiftleri çizilir. İdeal eğri (1,1) köşesinden geçer. Bir algoritmanın PR eğrisi tamamen diğerinin üzerindeyse o algoritma üstündür.</p>
+    <ul>
+      <li>Recall arttıkça Precision genellikle düşer (trade-off).</li>
+      <li>Recall monoton artmayan bir fonksiyon değildir — alınan belge sayısı arttıkça recall artar veya aynı kalır.</li>
+    </ul>
+  </div>
+
+  <!-- 8.4 -->
+  <div class="card card-amber">
+    <h2>8.4 Mean Average Precision (MAP)</h2>
+    <p>MAP, birden fazla sorgu üzerindeki ortalama kaliteyi ölçen en yaygın kullanılan IR değerlendirme metriğidir.</p>
+
+    <h3>Average Precision (AP) — Tek Sorgu</h3>
+    <pre><code>AP(q) = Σ[k=1 to n] (P(k) · rel(k)) / |alakalı belgeler|
+
+P(k)  = k. sıradaki precision
+rel(k) = 1 (k. belge alakalı) veya 0 (değil)</code></pre>
+
+    <div class="success-box">
+      <strong>AP Hesaplama Örneği</strong>
+      5 alakalı belge, sıralama: [R, NR, R, NR, NR, R, NR, R, NR, NR]<br>
+      AP = (1/1 + 2/3 + 3/6 + 4/8) / 5 = (1.0 + 0.667 + 0.5 + 0.5) / 5 = 0.533
+    </div>
+
+    <h3>MAP — Birden Fazla Sorgu</h3>
+    <pre><code>MAP = Σ[q=1 to |Q|] AP(q) / |Q|</code></pre>
+    <p>MAP, yüksek sıralamalarda alakalı belge bulan sistemleri ödüllendirir. Alakalı belgeyi geç bulan sistem düşük precision puanı alır → AP düşer.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>MAP'in Avantajları</h4>
+        Sıralamayı dikkate alır. Birden fazla sorguyu birleştirir. Tüm recall seviyelerindeki precision'ı ölçer.
+      </div>
+      <div class="g-card">
+        <h4>MAP'in Dezavantajları</h4>
+        İkili (binary) relevance varsayar — kısmi alaka yok. Her alakalı belgeyi bilmek gerekir.
+      </div>
+    </div>
+  </div>
+
+  <!-- 8.5 -->
+  <div class="card card-red">
+    <h2>8.5 ROC Eğrisi ve AUC</h2>
+    <p><strong>ROC (Receiver Operating Characteristics)</strong> eğrisi, True Positive Rate (Recall) ile False Positive Rate arasındaki dengeyi gösterir.</p>
+
+    <pre><code>TPR = Recall = TP / (TP + FN)   ← Y ekseni
+FPR = FP / (FP + TN)             ← X ekseni</code></pre>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>AUC (Alan Altı)</h4>
+        0.5 = rastgele sistem. 1.0 = mükemmel. AUC, rastgele seçilen alakalı belgenin alakasız belgeye göre daha yüksek sıralanma olasılığıdır.
+      </div>
+      <div class="g-card">
+        <h4>ROC vs PR Eğrisi</h4>
+        Dengesiz koleksiyonlarda (çok az alakalı belge) ROC yanıltıcı olabilir. PR eğrisi bu durumda daha dürüsttür.
+      </div>
+    </div>
+  </div>
+
+  <!-- 8.6 -->
+  <div class="card">
+    <h2>8.6 Kappa İstatistiği ve Alaka Değerlendirmesi</h2>
+    <p>İki farklı hakem arasındaki anlaşma düzeyi <strong>Cohen's Kappa (κ)</strong> ile ölçülür:</p>
+
+    <pre><code>κ = (P(A) - P(E)) / (1 - P(E))
+
+P(A) = hakemler arasındaki gözlemlenen anlaşma oranı
+P(E) = şansa bağlı beklenen anlaşma oranı</code></pre>
+
+    <table>
+      <tr><th>κ değeri</th><th>Yorumu</th></tr>
+      <tr><td>&lt; 0</td><td>Şanstan daha kötü anlaşma</td></tr>
+      <tr><td>0.0 – 0.2</td><td>Çok zayıf</td></tr>
+      <tr><td>0.2 – 0.4</td><td>Zayıf</td></tr>
+      <tr><td>0.4 – 0.6</td><td>Orta</td></tr>
+      <tr><td>0.6 – 0.8</td><td>Güçlü (IR için kabul edilebilir)</td></tr>
+      <tr><td>0.8 – 1.0</td><td>Çok güçlü</td></tr>
+    </table>
+
+    <h3>Pooling Yöntemi</h3>
+    <p>Büyük koleksiyonlarda her belgeyi her sorgu için değerlendirmek mümkün değildir. <strong>Pooling</strong>: birden fazla IR sisteminin top-k sonuçlarını birleştir, yalnızca bu birleşimi değerlendir.</p>
+
+    <h3>A/B Testi</h3>
+    <p>Gerçek kullanıcılarla sistem karşılaştırması: trafiğin küçük bir kısmı (%1-10) yeni sisteme yönlendirilir; clickthrough analizi ile karşılaştırma yapılır.</p>
+  </div>
+
+  <!-- 8.7 -->
+  <div class="card">
+    <h2>8.7 Sonuç Snippets (Özetler)</h2>
+    <p>Kullanıcılar genellikle tüm belgelere bakmaz. Sistemler her sonuç için kısa bir özet (snippet) gösterir.</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Static Snippet (Statik)</h4>
+        Sorgutan bağımsız. Her zaman aynı. Index zamanında hazırlanır (cache). Hızlı ama az bilgilendirici.
+      </div>
+      <div class="g-card">
+        <h4>Dynamic Snippet (Dinamik)</h4>
+        Sorguya göre değişir. KWIC (Keyword-In-Context): sorgu terimi etrafındaki metin penceresi. Yavaş ama daha alakalı.
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card" style="background:#1a3a6e;color:#fff;border:none">
+    <h2 style="color:#fff;border-bottom-color:rgba(255,255,255,.2)">Hızlı Başvuru Kartı</h2>
+    <table style="color:#e0e8f8">
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Precision</strong></td><td>TP / (TP+FP) — alınanların ne kadarı doğru</td></tr>
+      <tr><td><strong>Recall</strong></td><td>TP / (TP+FN) — alakalıların ne kadarı bulundu</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>F₁</strong></td><td>2PR/(P+R) — harmonik ortalama, β=1</td></tr>
+      <tr><td><strong>MAP</strong></td><td>Sorgu başına AP'lerin ortalaması; sıralamayı ölçer</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>P@k</strong></td><td>Top-k'daki alakalı / k (sabit cutoff)</td></tr>
+      <tr><td><strong>R-Precision</strong></td><td>Top-R'deki alakalı / R (R = toplam alakalı sayısı)</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>BEP</strong></td><td>P = R olduğu nokta; R-Precision'a yakındır</td></tr>
+      <tr><td><strong>ROC / AUC</strong></td><td>TPR vs FPR; AUC=0.5 rastgele, AUC=1.0 mükemmel</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Kappa (κ)</strong></td><td>(P(A)-P(E))/(1-P(E)); 0.6+ IR için kabul edilebilir</td></tr>
+    </table>
+  </div>
+
+</div>
+</div><!-- /lesson -->
+
+<!-- ==================== QUIZ ==================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Skor</span>
+    <div class="score-track"><div class="score-fill" id="scoreBar" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Başla</button>
+</div>
+</div>
+
+<!-- ==================== CLASSIC ==================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="info-box" style="margin-bottom:24px">
+    <strong>Nasıl Çalışır?</strong>
+    Her sorunun başlığına tıkla → Soruyu gör ve kendi cevabını düşün → Tekrar tıkla → Model cevabı aç.
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — Precision, Recall ve F₁ Hesaplama</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Bir koleksiyonda 10 alakalı belge var. Sistem 8 belge getirdi: bunların 5'i alakalı, 3'ü alakasız. (a) Precision, Recall ve F₁'i hesaplayın. (b) β=2 kullanan F-ölçüsünü hesaplayın (Recall ağırlıklı). (c) Neden bu metriği kullanırsınız?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a)</strong></p>
+      <pre><code>TP = 5, FP = 3, FN = 5 (10 alakalı - 5 bulunan), TN = büyük
+
+Precision = 5 / (5+3) = 5/8 = 0.625
+Recall    = 5 / (5+5) = 5/10 = 0.50
+F₁        = 2 × 0.625 × 0.50 / (0.625 + 0.50) = 0.625/1.125 ≈ 0.556</code></pre>
+      <p><strong>(b) β=2 → Recall ağırlıklı F-ölçüsü:</strong></p>
+      <pre><code>F = (β²+1)·P·R / (β²·P + R)
+F = (4+1)·0.625·0.50 / (4·0.625 + 0.50)
+F = 5·0.3125 / (2.5 + 0.5) = 1.5625 / 3.0 ≈ 0.521</code></pre>
+      <p><strong>(c)</strong> β=2, Recall'ın Precision'dan 2 kat daha önemli olduğu durumlar için idealdir: medikal tarama, hukuki belge araştırması — alakalı belge kaçırmak büyük risk taşır.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — MAP Hesaplama</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> İki sorgu için sıralı sonuçlar (R=alakalı, N=alakasız):<br>
+      Q1: [R, N, R, N, R] — toplam 3 alakalı belge<br>
+      Q2: [N, R, N, N, R] — toplam 3 alakalı belge<br>
+      Her iki sorgu için AP'yi ve MAP'i hesaplayın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Q1:</strong></p>
+      <pre><code>Rank 1: R → P(1) = 1/1 = 1.0
+Rank 3: R → P(3) = 2/3 ≈ 0.667
+Rank 5: R → P(5) = 3/5 = 0.60
+AP(Q1) = (1.0 + 0.667 + 0.60) / 3 = 2.267 / 3 ≈ 0.756</code></pre>
+      <p><strong>Q2:</strong></p>
+      <pre><code>Rank 2: R → P(2) = 1/2 = 0.50
+Rank 5: R → P(5) = 2/5 = 0.40
+(3. alakalı belge top-5'te yok → contributes 0)
+AP(Q2) = (0.50 + 0.40 + 0) / 3 = 0.90 / 3 = 0.30</code></pre>
+      <p><strong>MAP = (0.756 + 0.30) / 2 ≈ 0.528</strong></p>
+      <div class="info-box">Q1'in AP'si çok daha yüksek çünkü alakalı belgeler sıralamada üstte. MAP, geç bulan sistemi cezalandırır.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — Kappa İstatistiği Hesaplama</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> İki hakem 10 belgeyi değerlendiriyor. Hakem 1'in EVET dediği: {1,2,3,4,5}. Hakem 2'nin EVET dediği: {1,2,3,6,7}. Anlaşma: {1,2,3} (her ikisi EVET), {8,9,10} (her ikisi HAYIR). Kappa değerini hesaplayın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <pre><code>N = 10
+
+Anlaşma tablosu:
+         H2:EVET  H2:HAYIR
+H1:EVET    3         2        → 5
+H1:HAYIR   2         3        → 5
+           5         5        N=10
+
+P(A) = (3 + 3) / 10 = 0.60
+
+P(Relevant)    = ((5+5) + (5+5)) / (2×10) = 10/10...
+Daha dikkatli:
+P(Relevant)    = [(H1=R count) + (H2=R count)] / (2N)
+               = [5 + 5] / 20 = 0.50
+P(Nonrelevant) = [5 + 5] / 20 = 0.50
+
+P(E) = 0.50² + 0.50² = 0.50
+
+κ = (0.60 - 0.50) / (1 - 0.50) = 0.10 / 0.50 = 0.20</code></pre>
+      <div class="warning-box"><strong>κ=0.20:</strong> Zayıf anlaşma. Bu sorgu için hakemler büyük ölçüde farklı yargılar üretiyor. IR değerlendirmelerinde κ ≥ 0.6 hedeflenir.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — P@k vs R-Precision Karşılaştırması</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> İki sorgu: Q1 (koleksiyonda 2 alakalı belge), Q2 (koleksiyonda 20 alakalı belge). Her ikisi için de sistem top-10'da 2 alakalı belge döndürdü. P@10 ve R-Precision'ı her sorgu için hesaplayın ve karşılaştırın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>P@10:</strong></p>
+      <pre><code>Q1: P@10 = 2/10 = 0.20
+Q2: P@10 = 2/10 = 0.20 ← Her iki sorgu eşit görünür!</code></pre>
+      <p><strong>R-Precision:</strong></p>
+      <pre><code>Q1: R=2, top-2'de 2 alakalı → R-Precision = 2/2 = 1.0 (mükemmel!)
+Q2: R=20, top-20'de 2 alakalı → R-Precision = 2/20 = 0.10 (kötü)</code></pre>
+      <div class="success-box"><strong>Sonuç:</strong> P@10 her iki sorguyu eşit değerlendirir → adil değil. R-Precision Q1'in başarısını (2/2=tüm alakalılar bulundu) ve Q2'nin başarısızlığını (sadece 2/20) doğru yansıtır.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — ROC Eğrisi vs Precision-Recall Eğrisi</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> 1.000.000 belgeli bir koleksiyonda yalnızca 50 belge alakalı. Sistem ikisini de değerlendirin: ROC eğrisi ve P-R eğrisi. Hangi metrik bu koleksiyon için daha uygun? Neden?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Sorun: ROC yanıltıcıdır.</strong></p>
+      <pre><code>TN sayısı = ~999.950 (alakasız belge)
+FPR = FP / (FP + TN) = FP / ~999.950
+
+Sistem 100 belge getirse, 10'u alakalı:
+FPR = 90 / 999.950 ≈ 0.00009 (neredeyse sıfır!)
+TPR = 10/50 = 0.20
+
+ROC eğrisinde bu nokta sol-üst köşeye çok yakın → "iyi" görünür
+Oysa 40 alakalı belge kaçırıldı!</code></pre>
+      <p><strong>P-R eğrisi dürüsttür:</strong></p>
+      <pre><code>Precision = 10/100 = 0.10 (alınanların sadece %10'u alakalı)
+Recall    = 10/50  = 0.20
+Bu nokta PR eğrisinde sol-alt köşeye yakın → gerçek başarısızlık görünür.</code></pre>
+      <div class="success-box"><strong>Kural:</strong> Dengesiz koleksiyonlarda (çok az alakalı belge) PR eğrisi kullanın. ROC, TN'yi dikkate aldığı için bu durumda yanıltıcıdır.</div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /classic -->
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+const questions = [
+  {
+    q: "Precision nasıl tanımlanır?",
+    opts: ["TP / (TP + FN)","TP / (TP + FP)","(TP + TN) / N","FP / (FP + TN)"],
+    ans: 1,
+    exp: "Precision = TP / (TP + FP) = alınan belgeler arasında gerçekten alakalı olanların oranı. Recall ise TP / (TP + FN) = tüm alakalı belgeler arasında bulunanların oranı."
+  },
+  {
+    q: "IR değerlendirmesinde neden Accuracy (doğruluk) yerine Precision ve Recall kullanılır?",
+    opts: ["Accuracy hesaplamak daha zordur","Büyük koleksiyonlarda TN sayısı çok büyük olduğundan Accuracy yanıltıcı yüksek çıkar","Precision ve Recall daha kolay hesaplanır","Accuracy sıralı sonuçları desteklemez"],
+    ans: 1,
+    exp: "1M belgede 50 alakalı varken sistem hiçbir şey getirmese Accuracy = 999.950/1.000.000 ≈ %99.99. TN sayısı devasa olduğundan Accuracy gerçek başarısızlığı gizler."
+  },
+  {
+    q: "F₁ ölçüsü neden aritmetik ortalama yerine harmonik ortalama kullanır?",
+    opts: ["Harmonik ortalama hesaplaması daha basittir","P=1, R=0 gibi aşırı dengesizlikleri cezalandırır; aritmik ortalama 0.5 verirdi","Harmonik ortalama her zaman daha büyük bir değer üretir","Aritmetik ortalama sıralı verilerde çalışmaz"],
+    ans: 1,
+    exp: "P=1, R=0: sistem alakalı hiçbir belge getirmemiştir (tam başarısız). F₁=0 doğru cezayı verir. Aritmetik ortalama yanıltıcı biçimde 0.5 üretir. Harmonik ortalama, çok düşük değeri olan metriklere duyarlıdır."
+  },
+  {
+    q: "β=2 kullanan F-ölçüsü ne anlama gelir?",
+    opts: ["Precision'ın Recall'dan 2 kat daha önemli olduğu durum","Recall'ın Precision'dan 2 kat daha önemli olduğu durum","Her iki metriğin eşit ağırlıklı olduğu varsayılan F₁","İki sorgu üzerindeki ortalama F skoru"],
+    ans: 1,
+    exp: "β² = (1-α)/α formülünde β=2 → Recall'a Precision'dan 2 kat fazla ağırlık verilir. Medikal tanı, hukuki araştırma gibi FN'nin çok maliyetli olduğu durumlarda kullanılır."
+  },
+  {
+    q: "Average Precision (AP) ne ölçer?",
+    opts: ["Top-k'daki sabit precision değeri","Alakalı her belge bulunduğunda hesaplanan precision değerlerinin ortalaması","Tüm belgeler üzerindeki precision","Birden fazla sorgunun ortalama precision değeri"],
+    ans: 1,
+    exp: "AP, alakalı her belge bulunduğu anda o andaki precision'ı hesaplar ve bu değerleri alakalı belge sayısına böler. Erken bulunan alakalı belgeler yüksek precision → yüksek AP."
+  },
+  {
+    q: "MAP nasıl hesaplanır?",
+    opts: ["Tüm sorgular birleştirilerek tek bir AP hesaplanır","Her sorgu için ayrı AP hesaplanır, sonra bu AP'lerin aritmetik ortalaması alınır","Sadece başarılı sorguların AP'si ortalaması","Sorgular için harmonik ortalama AP"],
+    ans: 1,
+    exp: "MAP = Σ AP(q) / |Q|. Her sorgu için ayrı AP hesaplanır (sistemin o sorgu için sıralamasına göre). Bu AP değerlerinin basit aritmetik ortalaması MAP'tir."
+  },
+  {
+    q: "P@k ile R-Precision arasındaki temel fark nedir?",
+    opts: ["P@k sadece precision ölçer, R-Precision sadece recall","P@k sabit cutoff kullanır; R-Precision cutoff'u sorgunun toplam alakalı belge sayısına göre ayarlar","R-Precision her zaman P@k'dan büyüktür","P@k sıralama için, R-Precision set-based değerlendirme için kullanılır"],
+    ans: 1,
+    exp: "P@k: her sorguda top-k değerlendirilir (k sabittir). R-Precision: cutoff R = o sorgudaki toplam alakalı belge sayısıdır. 2 alakalıda top-2, 50 alakalıda top-50 değerlendirilir → sorgu-farkındalıklı."
+  },
+  {
+    q: "Break-Even Point (BEP) nedir?",
+    opts: ["Precision = Recall eşitliğinin sağlandığı nokta","F₁ = 0 olduğu nokta","MAP değerinin en yüksek olduğu sorgu","Sistemin en hızlı çalıştığı nokta"],
+    ans: 0,
+    exp: "BEP, Precision-Recall eğrisinde P=R olduğu noktadır. R-Precision bu noktanın iyi bir tahminidir çünkü rank R'de hem P(R) = r/R hem de Rec(R) = r/R eşittir."
+  },
+  {
+    q: "ROC eğrisinin Y ekseni ve X ekseni neyi gösterir?",
+    opts: ["Y: Precision, X: Recall","Y: TPR (Recall), X: FPR","Y: FPR, X: TPR","Y: Accuracy, X: F₁"],
+    ans: 1,
+    exp: "ROC: Y ekseni TPR = TP/(TP+FN) = Recall. X ekseni FPR = FP/(FP+TN). İyi sistem sol-üst köşeye yakın seyreder. AUC = 0.5 rastgele, AUC = 1.0 mükemmel."
+  },
+  {
+    q: "AUC'nin (Alan Altındaki Alan) probabilistik yorumu nedir?",
+    opts: ["Sistemin ortalama doğruluk oranı","Rastgele seçilen alakalı bir belgenin, rastgele seçilen alakasız bir belgeden daha yüksek sıralanma olasılığı","Tüm sorguların ortalama recall değeri","Precision-Recall eğrisinin altındaki alan"],
+    ans: 1,
+    exp: "AUC = P(alakalı belge rastgele seçilen alakasız belgeden yüksek sıralanır). AUC=0.5: sistem rastgele sıralıyor. AUC=1.0: sistem her alakalı belgeyi her alakasız belgeden önce sıralıyor."
+  },
+  {
+    q: "Kappa istatistiği (κ) ne ölçer?",
+    opts: ["Sistemin doğruluk oranı","Şansa bağlı anlaşmayı düzelterek iki hakem arasındaki gerçek anlaşma düzeyi","Belgelerin alaka derecesi","Sistemin hız performansı"],
+    ans: 1,
+    exp: "κ = (P(A) - P(E)) / (1 - P(E)). P(A): gözlemlenen anlaşma oranı. P(E): şansa bağlı beklenen anlaşma. κ, şansa bağlı anlaşmayı düzelterek gerçek anlaşmayı ölçer. IR için κ ≥ 0.6 hedeflenir."
+  },
+  {
+    q: "Pooling yöntemi neden kullanılır?",
+    opts: ["Her belgenin her sorgu için değerlendirilmesini sağlamak","Büyük koleksiyonlarda her belgeyi değerlendirmek mümkün olmadığından birden fazla sistemin top-k sonuçlarını birleştirmek","Kappa değerini hesaplamak için","Dinamik snippet oluşturmak için"],
+    ans: 1,
+    exp: "Büyük koleksiyonlarda (TREC gibi) her belgeyi her sorgu için değerlendirmek imkânsızdır. Pooling: farklı sistemlerin top-k sonuçları birleştirilir ve yalnızca bu birleşim değerlendirilir — iş yükü azalır."
+  },
+  {
+    q: "Hangi durumda P-R eğrisi ROC eğrisinden daha bilgilendiricidir?",
+    opts: ["Koleksiyonda çok sayıda alakalı belge varsa","Koleksiyonda çok az alakalı belge varsa (dengesiz koleksiyon)","Sistem sıralama yapmıyorsa","Büyük k değerlerinde"],
+    ans: 1,
+    exp: "Dengesiz koleksiyonda TN sayısı çok büyüktür. FPR = FP / (FP + TN) ≈ FP / TN → çok küçük → ROC eğrisi 'iyi' görünür. P-R eğrisi TN'yi dikkate almaz → gerçek başarısızlık görünür."
+  },
+  {
+    q: "KWIC (Keyword-In-Context) snippet nedir?",
+    opts: ["Sabit, sorgutan bağımsız belge özeti","Sorgu terimlerini ve etrafındaki metin penceresini gösteren dinamik özet","Belgenin başlık ve meta verilerinden oluşan statik özet","Tüm belgenin tam metni"],
+    ans: 1,
+    exp: "KWIC (Keyword-In-Context): sorgu terimleri etrafında bir metin penceresi (örn. 20 kelime) gösterilir. Sorguya bağlı dinamik snippet'tir. Kullanıcının ilgili içeriği hızlıca görmesini sağlar."
+  },
+  {
+    q: "Recall monoton artmayan bir fonksiyon değildir. Bu ne demektir?",
+    opts: ["Recall her zaman sabit kalır","Getirilen belge sayısı arttıkça Recall azalabilir","Getirilen belge sayısı arttıkça Recall hiçbir zaman azalmaz — artar veya aynı kalır","Recall yalnızca precision artınca artar"],
+    ans: 2,
+    exp: "Recall = TP / (TP + FN). Yeni belge getirildiğinde: alakalıysa TP artar → Recall artar; alakasızsa TP değişmez → Recall aynı kalır. Recall hiçbir zaman DÜŞMEZ. Precision ise düşebilir."
+  }
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  const c = document.getElementById('quizContainer');
+  c.innerHTML = '';
+  score = 0; answered = 0;
+  updateScore();
+  questions.forEach((q, qi) => {
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;min-width:18px">${['A','B','C','D'][oi]})</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    c.innerHTML += `
+      <div class="q-card" id="qcard_${qi}">
+        <div class="q-num">Soru ${qi+1} / 15</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}"><strong>Açıklama:</strong> ${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(o => o.disabled = true);
+  const selected = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) { selected.classList.add('correct'); score++; }
+  else { selected.classList.add('wrong'); correct.classList.add('correct'); }
+  answered++;
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('scoreBar').style.width = pct + '%';
+  document.getElementById('scoreVal').textContent = `${score} / ${questions.length}`;
+}
+
+function resetQuiz() { buildQuiz(); }
+buildQuiz();
+</script>
+</body>
+</html>

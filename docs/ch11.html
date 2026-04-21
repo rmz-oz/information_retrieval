@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch11: Text Classification, Naive Bayes &amp; LSI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none;padding:0}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:100px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 16px;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 11: Text Classification, Naive Bayes &amp; LSI</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al. Ch. 13, 15–16</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ==================== LESSON ==================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 11.1 -->
+  <div class="card">
+    <h2>11.1 Metin Sınıflandırma Problemi</h2>
+    <p>Metin sınıflandırma: bir belgeyi önceden tanımlanmış sınıflardan birine atama görevidir.</p>
+
+    <pre><code>γ: X → C
+X = belge uzayı
+C = {c₁, c₂, ..., c_J} = sınıflar kümesi</code></pre>
+
+    <h3>Uygulama Alanları</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Spam Tespiti</h4>
+        C = {spam, ham}. Email → sınıflandırıcı → gelen kutusu veya spam klasörü.
+      </div>
+      <div class="g-card">
+        <h4>Duygu Analizi</h4>
+        C = {pozitif, negatif, nötr}. Ürün yorumları → duygu sınıfı.
+      </div>
+      <div class="g-card">
+        <h4>Konu Sınıflandırma</h4>
+        C = {Çin, Spor, İngiltere, ...}. Haber makaleleri → konu etiketleri.
+      </div>
+      <div class="g-card">
+        <h4>Dil Tespiti</h4>
+        C = {Türkçe, İngilizce, Almanca, ...}. Metin → dil tanıma.
+      </div>
+    </div>
+
+    <h3>Süpervizeli Öğrenme</h3>
+    <div class="flow">
+      <div class="flow-box">Etiketli Eğitim Veri</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Öğrenme Algoritması Γ</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Sınıflandırıcı γ</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Test Belgesi → Sınıf</div>
+    </div>
+
+    <h3>Kural Tabanlı vs İstatistiksel</h3>
+    <table>
+      <tr><th>Yaklaşım</th><th>Yöntem</th><th>Avantaj</th><th>Dezavantaj</th></tr>
+      <tr><td>Manuel Kurallar</td><td>Boolean sorgular, regex</td><td>Şeffaf, kontrol edilebilir</td><td>Bakım yoğun, ölçeklenmez</td></tr>
+      <tr><td>İstatistiksel (ML)</td><td>Naive Bayes, kNN, SVM</td><td>Otomatik öğrenme, ölçeklenebilir</td><td>Etiketli veri gerekir</td></tr>
+    </table>
+  </div>
+
+  <!-- 11.2 -->
+  <div class="card card-teal">
+    <h2>11.2 Naive Bayes Sınıflandırıcı</h2>
+    <p>Naive Bayes, Bayes teoremini uygulayan ve koşullu bağımsızlık varsayan olasılıksal bir sınıflandırıcıdır.</p>
+
+    <h3>Multinomial Naive Bayes</h3>
+    <pre><code>c_MAP = argmax_{c ∈ C} P(c) · Π_{t_k ∈ d} P(t_k | c)
+
+Logaritmik form (underflow önlemek için):
+c_MAP = argmax_c [log P(c) + Σ_{t_k ∈ d} log P(t_k | c)]
+
+P(c)     = sınıf önsel olasılığı = D_c / D
+P(t|c)   = sınıf c'de t teriminin koşullu olasılığı</code></pre>
+
+    <h3>Laplace Smoothing ile Terim Olasılığı</h3>
+    <pre><code>P(t|c) = (count(t, c) + 1) / (Σ_t' count(t', c) + |V|)
+
+count(t, c) : sınıf c'deki tüm belgelerde t'nin toplam sayısı
+|V|         : kelime hazinesi boyutu</code></pre>
+
+    <div class="warning-box">
+      <strong>Neden Laplace Smoothing?</strong>
+      Eğitim verisinde görülmeyen (count=0) terimler log(0) = -∞ üretir → tahmin çöker. Laplace smoothing her terime +1 ekleyerek sıfır olasılık sorununu önler.
+    </div>
+
+    <h3>İki NB Modeli</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Multinomial NB</h4>
+        tf (term frequency) dikkate alır. Her terim oluşumu bağımsız. Belge uzunluğunu hesaba katar. Genellikle daha iyi performans.
+      </div>
+      <div class="g-card">
+        <h4>Bernoulli NB</h4>
+        Binary: terim var/yok. Hem var olmayı hem de yok olmayı modeller. Kısa belgeler için daha uygun. BIM ile özdeş.
+      </div>
+    </div>
+
+    <div class="success-box">
+      <strong>NB'nin Avantajları</strong>
+      Çok hızlı eğitim ve test. Düşük hesaplama: tek geçişte. Küçük eğitim verisinde iyi. Özellik seçimi olmadan bile genellikle iyi çalışır. "Sürpriz derecede etkili."
+    </div>
+  </div>
+
+  <!-- 11.3 -->
+  <div class="card card-purple">
+    <h2>11.3 Vektör Uzay Sınıflandırması</h2>
+    <p>VSM sınıflandırması: belgeler tf-idf vektörleri olarak temsil edilir ve bu uzayda sınıflandırılır.</p>
+
+    <h3>k-Nearest Neighbor (kNN)</h3>
+    <p>Yeni belge d için: eğitim setindeki en yakın k komşuyu bul, çoğunluk oyuyla sınıf belirle.</p>
+    <pre><code>kNN(d) = argmax_c Σ_{d' ∈ kNN} I[class(d') = c]
+
+Benzerlik: cosine similarity kullanılır
+k=1: en yakın komşunun sınıfı
+k=3: 3 komşu arasında çoğunluk</code></pre>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>kNN Avantajları</h4>
+        Öğrenme süreci yok. Yeni sınıflar kolay eklenir. Lokal karar sınırı. Basit implementasyon.
+      </div>
+      <div class="g-card">
+        <h4>kNN Dezavantajları</h4>
+        Test süresi yavaş — tüm eğitim seti taranır. Yüksek boyutlu uzayda "curse of dimensionality". Büyük bellek gereksinimi.
+      </div>
+    </div>
+
+    <h3>Rocchio Sınıflandırıcısı</h3>
+    <p>Her sınıf için centroid (ağırlık merkezi) hesapla. Yeni belgeyi en yakın centroid'in sınıfına ata:</p>
+    <pre><code>μ(c) = (1/|D_c|) · Σ_{d ∈ D_c} v(d)    ← sınıf centroid'i
+c(d) = argmax_c cosine(v(d), μ(c))       ← en yakın centroid</code></pre>
+
+    <div class="info-box">
+      <strong>Doğrusal Sınıflandırıcı</strong>
+      Rocchio ve Naive Bayes birer doğrusal sınıflandırıcıdır: karar sınırı bir hiper düzlemdir. VSM'de bu karar sınırı belge uzayında iki bölgeyi ayırır.
+    </div>
+  </div>
+
+  <!-- 11.4 -->
+  <div class="card card-amber">
+    <h2>11.4 LSI — Latent Semantic Indexing</h2>
+    <p>VSM'nin temel sorunu: "car" ve "automobile" farklı boyutlarda → benzer belgeler alakasız görünür. LSI bu problemi çözmek için <strong>Singular Value Decomposition (SVD)</strong> kullanır.</p>
+
+    <h3>Synonymy ve Polysemy Problemi</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Synonymy</h4>
+        Aynı kavram farklı kelimeler: "car" = "automobile" = "auto". VSM'de bunlar farklı boyutlar → benzer belgeler düşük cosine skoru alır.
+      </div>
+      <div class="g-card">
+        <h4>Polysemy</h4>
+        Aynı kelime farklı anlamlar: "bank" (nehir/mali). VSM'de bu iki anlamdaki belgeler yanlışlıkla benzer görünür.
+      </div>
+    </div>
+
+    <h3>SVD (Tekil Değer Ayrışımı)</h3>
+    <pre><code>Terim-Belge Matrisi: A ∈ R^{m×n}
+
+SVD:  A = U · Σ · V^T
+
+U  : m×m terim matrisi (tekil vektörler)
+Σ  : m×n diyagonal matris (tekil değerler σ₁ ≥ σ₂ ≥ ... ≥ 0)
+V^T: n×n belge matrisi</code></pre>
+
+    <h3>Rank-k Yaklaşım (LSI)</h3>
+    <pre><code>A_k = U_k · Σ_k · V_k^T   (yalnızca en büyük k tekil değer)
+
+k boyutlu "kavramsal uzay":
+  - Gürültü azaltılır
+  - Semantik benzerlik yakalanır
+  - Synonymy ve polysemy kısmen çözülür
+
+Tipik k: 100–300 (|V| = tens of thousands)</code></pre>
+
+    <div class="success-box">
+      <strong>LSI'nin Çalışması</strong>
+      "car" araması yapılınca LSI, "automobile" içeren belgeler de döndürür — çünkü SVD bu iki terimi aynı kavramsal boyuta yakın yerleştirir. Semantik kümeleme otomatik öğrenilir.
+    </div>
+
+    <div class="warning-box">
+      <strong>LSI'nin Dezavantajları</strong>
+      SVD hesaplaması pahalı: O(mn²). Yeni belgeler eklenince SVD yeniden hesaplanmalı. k seçimi zor. Yorumlanabilirlik düşük. Modern deep learning (word2vec, BERT) LSI'yi büyük ölçüde geçmiştir.
+    </div>
+  </div>
+
+  <!-- 11.5 -->
+  <div class="card card-red">
+    <h2>11.5 Sınıflandırıcı Değerlendirmesi</h2>
+    <p>Metin sınıflandırıcıları aynı IR metrikleri ile değerlendirilir: Precision, Recall, F₁.</p>
+
+    <h3>Micro vs Macro Averaging</h3>
+    <table>
+      <tr><th>Yöntem</th><th>Hesaplama</th><th>Kullanım</th></tr>
+      <tr><td><strong>Macro-averaging</strong></td><td>Her sınıf için P/R/F hesapla, sonra ortalama al</td><td>Nadir sınıflar önemli olduğunda</td></tr>
+      <tr><td><strong>Micro-averaging</strong></td><td>Tüm sınıfların TP/FP/FN'lerini birleştir, sonra hesapla</td><td>Sık sınıflar daha önemliyse</td></tr>
+    </table>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Macro P@k=0.8, 0.9 → Macro avg = 0.85</h4>
+        Nadir sınıflar daha çok etkiler. Küçük sınıflar büyük sınıflarla eşit ağırlıklı.
+      </div>
+      <div class="g-card">
+        <h4>Micro avg: büyük sınıf dominant</h4>
+        Büyük (sık) sınıfların performansı daha çok etkiler. Genel doğruluk (accuracy) ile yakın.
+      </div>
+    </div>
+
+    <h3>Feature Selection (Özellik Seçimi)</h3>
+    <p>Yüksek boyutlu terim uzayını azaltmak için: MI (Mutual Information), Chi-squared, frekans tabanlı filtreleme. Boyut azaltma hem hızı artırır hem overfitting'i önler.</p>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card" style="background:#1a3a6e;color:#fff;border:none">
+    <h2 style="color:#fff;border-bottom-color:rgba(255,255,255,.2)">Hızlı Başvuru Kartı</h2>
+    <table style="color:#e0e8f8">
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>NB sınıf kararı</strong></td><td>argmax_c [log P(c) + Σ log P(t|c)]</td></tr>
+      <tr><td><strong>P(t|c) Laplace</strong></td><td>(count(t,c)+1) / (Σcount(t',c)+|V|)</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Multinomial NB</strong></td><td>tf dikkate alır; Bernoulli NB: binary (BIM ile özdeş)</td></tr>
+      <tr><td><strong>kNN</strong></td><td>k komşu → çoğunluk oyu; öğrenme yok, test yavaş</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Rocchio</strong></td><td>Sınıf centroid'ine en yakın belgeyi ata → doğrusal</td></tr>
+      <tr><td><strong>LSI / SVD</strong></td><td>A = UΣV^T; rank-k ile semantik uzay; synonymy çözer</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Macro avg</strong></td><td>Her sınıf eşit ağırlık → nadir sınıflar önemli</td></tr>
+      <tr><td><strong>Micro avg</strong></td><td>Tüm TP/FP birleştir → sık sınıflar dominant</td></tr>
+    </table>
+  </div>
+
+</div>
+</div><!-- /lesson -->
+
+<!-- ==================== QUIZ ==================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Skor</span>
+    <div class="score-track"><div class="score-fill" id="scoreBar" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Başla</button>
+</div>
+</div>
+
+<!-- ==================== CLASSIC ==================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="info-box" style="margin-bottom:24px">
+    <strong>Nasıl Çalışır?</strong>
+    Her sorunun başlığına tıkla → Soruyu gör ve kendi cevabını düşün → Tekrar tıkla → Model cevabı aç.
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — Naive Bayes Hesaplama</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> 2 sınıf: Spor (S) ve Politika (P). Eğitim: S belgelerinde ["gol","maç","skor","oyuncu"], P belgelerinde ["seçim","oy","hükümet"]. |V|=4+3=7. Yeni belge: "gol seçim". Laplace smoothing ile sınıfı belirleyin. P(S)=P(P)=0.5.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <pre><code>P("gol"|S) = (1+1)/(4+7) = 2/11
+P("seçim"|S) = (0+1)/(4+7) = 1/11
+P("gol"|P) = (0+1)/(3+7) = 1/10
+P("seçim"|P) = (1+1)/(3+7) = 2/10
+
+log P(S|d) ∝ log(0.5) + log(2/11) + log(1/11)
+           = -0.693 + (-1.705) + (-2.398) = -4.796
+
+log P(P|d) ∝ log(0.5) + log(1/10) + log(2/10)
+           = -0.693 + (-2.303) + (-1.609) = -4.605
+
+P(P|d) > P(S|d) → Belge: POLİTİKA sınıfı</code></pre>
+      <div class="info-box">"seçim" Spor'da hiç geçmemiş (count=0). Laplace olmadan log(0)=-∞ → hesap çökerdi. Smoothing bunu kurtardı.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — Multinomial NB vs Bernoulli NB</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> "spam spam spam buy" belgesi için iki NB modeli arasındaki farkı açıklayın. "spam" 3 kez geçiyor. Hangi model daha avantajlı ve neden?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Multinomial NB:</strong> "spam" için P("spam"|c) 3 kez hesaplandı: log P("spam"|c) üç kez eklendi. Tekrarlı terimler daha güçlü kanıt sağlar. Gerçekçi: "spam" 3x "spam" 1x'ten daha güçlü ipucu.</p>
+      <p><strong>Bernoulli NB:</strong> "spam" sadece var/yok: 1 kez sayılır. Tekrarlı oluşumlar görmezden gelinir. Hem var olan hem olmayan tüm terimler için olasılık hesaplanır.</p>
+      <div class="success-box"><strong>Sonuç:</strong> Bu belge için Multinomial NB daha güçlü "spam" sinyali üretir. Genel olarak Multinomial NB metin sınıflandırmada daha iyi performans gösterir.</div>
+      <p><strong>Bernoulli'nin avantajı:</strong> Çok kısa belgeler veya binary özellikler (terim var/yok yeterli) için daha uygundur. Yokluğu da hesaba katar: eğitim verisinde sık geçen ama belgede olmayan terimler için negatif kanıt üretir.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — LSI ve SVD Sezgisi</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> 5×4 terim-belge matrisi A için rank-2 SVD uygulanıyor. (a) U, Σ, V^T boyutları nedir? (b) rank-2 yaklaşım ne anlama gelir? (c) "car" araması neden "automobile" içeren belgeleri döndürebilir?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) Boyutlar:</strong></p>
+      <pre><code>A: 5×4 (5 terim, 4 belge)
+U: 5×5 (terim tekil vektörleri)
+Σ: 5×4 (tekil değerler diyagonal)
+V^T: 4×4 (belge tekil vektörleri)
+
+Rank-2 kesmede:
+U_k: 5×2, Σ_k: 2×2, V_k^T: 2×4</code></pre>
+      <p><strong>(b) Rank-2 yaklaşım:</strong> En büyük 2 tekil değer korunur, diğerleri sıfırlanır. Bu, matrisi 2 boyutlu "kavramsal uzaya" indirger. Gürültü ve nadir terimler atılır.</p>
+      <p><strong>(c) "car" ve "automobile" nasıl bağlanır?</strong> Aynı belgeler içinde birlikte geçme eğilimindeler (co-occurrence). SVD bu birlikte geçme örüntüsünü öğrenir ve iki terimi kavramsal uzayda yakın yerleştirir. Rank-2 uzayında "car" vektörü "automobile" vektörüne yakındır → benzer sorgu sonuçları üretilir.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — kNN vs Naive Bayes Karşılaştırması</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> 10.000 eğitim belgesi (5 sınıf) ve 1.000 test belgesi için kNN (k=3) ve Naive Bayes'i karşılaştırın: eğitim süresi, test süresi, bellek gereksinimleri ve genel performans açısından.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <table>
+        <tr><th></th><th>kNN (k=3)</th><th>Naive Bayes</th></tr>
+        <tr><td>Eğitim süresi</td><td>O(1) — "lazy" öğrenme</td><td>O(N·|V|) — hızlı</td></tr>
+        <tr><td>Test süresi</td><td>O(N·|V|) — her test için tüm eğitim seti</td><td>O(|V|) — çok hızlı</td></tr>
+        <tr><td>Bellek</td><td>Tüm eğitim seti bellekte</td><td>Sadece P(t|c) tablosu</td></tr>
+        <tr><td>Performans</td><td>Lokal karar, güçlü</td><td>Basit ama sürpriz etkili</td></tr>
+      </table>
+      <div class="success-box"><strong>1.000 test × 10.000 eğitim:</strong> kNN 10 milyon benzerlik hesabı. NB 1.000 × |V| işlem. Büyük test seti için NB çok daha hızlı. Gerçek zamanlı uygulamalar için NB tercih edilir.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — Macro vs Micro Averaging</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> 3 sınıf: C1 (1000 test belgesi, F₁=0.90), C2 (100 test belgesi, F₁=0.50), C3 (10 test belgesi, F₁=0.10). Macro ve micro F₁'i hesaplayın. Hangi metrik daha anlamlı ve neden?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Macro F₁:</strong></p>
+      <pre><code>Macro F₁ = (0.90 + 0.50 + 0.10) / 3 = 1.50/3 = 0.50</code></pre>
+      <p><strong>Micro F₁ (yaklaşık):</strong></p>
+      <pre><code>Ağırlıklı ortalama (belge sayısına göre):
+Micro F₁ ≈ (1000×0.90 + 100×0.50 + 10×0.10) / 1110
+         = (900 + 50 + 1) / 1110 = 951/1110 ≈ 0.857</code></pre>
+      <div class="grid2">
+        <div class="g-card">
+          <h4>Macro F₁ = 0.50</h4>
+          C3 (sadece 10 belge) C1 ile eşit ağırlıklı. Nadir sınıflara daha fazla dikkat. Veri dengesizliğinde C3'ün düşük F₁'i sistemi "cezalandırır".
+        </div>
+        <div class="g-card">
+          <h4>Micro F₁ ≈ 0.857</h4>
+          C1 dominant (1000 belge). Genel doğruluğu yansıtır. Nadir sınıflar ihmal edilir.
+        </div>
+      </div>
+      <p><strong>Ne seçmeli?</strong> Nadir sınıflar (C3) önemliyse → Macro. Genel performans önemliyse → Micro. Reuters gibi dengeli kümeler için her ikisi de kullanılır.</p>
+    </div>
+  </div>
+
+</div>
+</div><!-- /classic -->
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+const questions = [
+  {
+    q: "Metin sınıflandırmasında süpervizeli öğrenme ne anlama gelir?",
+    opts: ["Sistem etiket olmadan öğrenir","Etiketli eğitim verisinden (d, c) çiftlerinden bir sınıflandırma fonksiyonu öğrenilir","Belgeleri başka belgelerle karşılaştırarak gruplar","Yalnızca Boolean sorgular kullanılır"],
+    ans: 1,
+    exp: "Supervised learning: Γ(D) = γ. D = {(d,c)} etiketli belgeler. Γ = öğrenme algoritması (NB, kNN, SVM). γ = öğrenilen sınıflandırıcı. Etiketleme 'öğretmen' rolü üstlenir."
+  },
+  {
+    q: "Multinomial Naive Bayes'in sınıf kararı nasıl verilir?",
+    opts: ["En yüksek TF-IDF değerine sahip sınıf seçilir","c_MAP = argmax_c [log P(c) + Σ log P(t|c)] — log olasılık toplamı","Belgeye en yakın eğitim belgesinin sınıfı","Ortalama cosine benzerliği en yüksek sınıf"],
+    ans: 1,
+    exp: "MAP (Maximum A Posteriori): c = argmax_c P(c|d) ∝ argmax_c P(c)·Π P(t|c). Sayısal underflow için log alınır: log P(c) + Σ log P(t|c). En yüksek log olasılıklı sınıf seçilir."
+  },
+  {
+    q: "Laplace smoothing P(t|c) hesabında neden gereklidir?",
+    opts: ["Hesaplamayı hızlandırmak için","Eğitim verisinde görülmeyen terimler için sıfır olasılık oluşmasını önler","Belge uzunluğunu normalize etmek için","Sınıf önsel olasılığını dengelemek için"],
+    ans: 1,
+    exp: "count(t,c)=0 ise P(t|c)=0. Çarpmada bu 0 → tüm sonuç sıfır veya log(-∞). Laplace: P(t|c)=(count+1)/(Σcount+|V|). Her terim en az 1/|V| olasılık alır."
+  },
+  {
+    q: "Bernoulli NB ile Multinomial NB arasındaki temel fark nedir?",
+    opts: ["Bernoulli daha hızlıdır","Bernoulli binary (var/yok) kullanır ve yokluğu da modeller; Multinomial tf (terim frekansı) kullanır","Multinomial çok sınıfı desteklerken Bernoulli sadece ikili","Bernoulli IDF kullanır, Multinomial kullanmaz"],
+    ans: 1,
+    exp: "Bernoulli NB = BIM (Binary Independence Model). Her terim için x_t ∈ {0,1}. Hem var (P(t|c)) hem yok ((1-P(t|c))) modellenir. Multinomial: tf dikkate alır, yokluk modellemez, genellikle daha iyi."
+  },
+  {
+    q: "kNN sınıflandırıcısında k parametresi ne belirler?",
+    opts: ["Eğitim veri boyutu","Kaç komşunun oyuna katılacağı — büyük k daha düzgün karar sınırı, küçük k daha gürültülü","Kelime hazinesi boyutu","Test belgesi sayısı"],
+    ans: 1,
+    exp: "k=1: en yakın komşunun sınıfı → gürültüye duyarlı. k büyük: daha stabil ama hesaplama maliyeti aynı. Uygun k, cross-validation ile belirlenir. Tek sayı genellikle tercih edilir (beraberliği önlemek için)."
+  },
+  {
+    q: "kNN'in en büyük dezavantajı nedir?",
+    opts: ["Eğitim süresi çok uzun","Test süresi yavaş — her test belgesi için tüm eğitim seti taranır","Yalnızca ikili sınıflandırma destekler","Laplace smoothing gerektirmez"],
+    ans: 1,
+    exp: "kNN 'lazy learner': eğitim yoktur, tüm maliyet test zamanında. N eğitim belgesi için her test belgesi O(N·|V|) maliyet. 10.000 eğitim × 1.000 test = 10 milyon benzerlik hesabı."
+  },
+  {
+    q: "Rocchio sınıflandırıcısında sınıf nasıl belirlenir?",
+    opts: ["En yüksek tf-idf teriminin sınıfı","Her sınıf için centroid hesaplanır; yeni belge en yakın centroid'in sınıfına atanır","k komşunun çoğunluk oyu","Bayes teoremi ile posterior olasılık hesabı"],
+    ans: 1,
+    exp: "μ(c) = (1/|D_c|)·Σ v(d) — sınıf centroid'i. c(d) = argmax_c cosine(v(d), μ(c)). Bu Rocchio RF algoritmasının sınıflandırmaya uygulanmasıdır. Doğrusal sınıflandırıcıdır."
+  },
+  {
+    q: "LSI'nin çözmeyi hedeflediği iki temel problem nedir?",
+    opts: ["Yüksek TF değerleri ve düşük IDF değerleri","Synonymy (aynı kavram farklı kelimeler) ve Polysemy (aynı kelime farklı anlamlar)","Uzun belgeler ve kısa belgeler","Binary ve tf-idf ağırlıklandırma arasındaki denge"],
+    ans: 1,
+    exp: "Synonymy: 'car' araması 'automobile' içeren belgeler bulamaz. Polysemy: 'bank' finansal ve coğrafi anlamda — her iki konudaki belgeler benzer görünür. LSI bu iki sorunu kısmen çözer."
+  },
+  {
+    q: "SVD'de tekil değer (singular value) ne temsil eder?",
+    opts: ["Her terimin IDF değeri","Her kavramsal boyutun koleksiyondaki önemini/varyansını — büyük σ daha önemli boyut","Her belgenin cosine skoru","Her sınıfın prior olasılığı"],
+    ans: 1,
+    exp: "Tekil değerler σ₁ ≥ σ₂ ≥ ... sıralanır. Büyük σ → o boyut koleksiyonun büyük varyansını açıklar. Rank-k: yalnızca k büyük tekil değer korunur → en önemli 'kavramlar' seçilir, gürültü atılır."
+  },
+  {
+    q: "Macro-averaging ve micro-averaging ne zaman birbirinden büyük ölçüde farklılaşır?",
+    opts: ["Tüm sınıflar eşit sayıda belgeye sahip olduğunda","Sınıflar arasında büyük boyut dengesizliği olduğunda — nadir sınıflar macro'yu, sık sınıflar micro'yu etkiler","Yalnızca binary sınıflandırmada","kNN kullanıldığında"],
+    ans: 1,
+    exp: "Macro: her sınıf eşit ağırlık → nadir sınıflar dominant. Micro: belge sayısına göre ağırlık → büyük sınıflar dominant. 1000 belge sınıf vs 10 belge sınıf → Macro çok farklı sonuç verir."
+  },
+  {
+    q: "Feature selection (özellik seçimi) metin sınıflandırmada neden yapılır?",
+    opts: ["Sınıf sayısını azaltmak için","Yüksek boyutlu terim uzayını azaltmak: hesaplama hızını artırır, overfitting önler","Naive Bayes'i Laplace gerektirmez hale getirmek için","Eğitim verisini dengelemek için"],
+    ans: 1,
+    exp: "Kelime hazinesi |V|=50.000+. Hepsi kullanılırsa hem yavaş hem overfitting riski. MI (Mutual Information), Chi-squared gibi yöntemlerle en ayrıştırıcı k terim seçilir (örn. k=10.000). Boyut azaltma performansı artırabilir."
+  },
+  {
+    q: "Naive Bayes neden 'naive' (saf) olarak adlandırılır?",
+    opts: ["Hesaplaması çok basit olduğu için","Koşullu terim bağımsızlığı varsayımı pratikte nadiren doğru olduğu için","Yalnızca çok küçük veri setleri için kullanılabildiği için","Bayesci olmayan bir model olduğu için"],
+    ans: 1,
+    exp: "P(d|c) = Π P(t_k|c) varsayımı: tüm terimler birbirinden koşullu bağımsız. Bu 'naive' varsayım gerçekçi değil ('the', 'cat' genellikle birlikte). Ama pratikte놀랍게도 çalışıyor — NLP'nin en başarılı 'naive' modeli."
+  },
+  {
+    q: "LSI'de rank-k seçimi nasıl etkileyir sistemi?",
+    opts: ["k arttıkça her zaman daha iyi sonuç verir","Küçük k daha fazla gürültü atar ama bilgi kaybeder; büyük k daha az gürültü atar ama boyut fazla kalır","k değerinin etkisi yoktur","k = |V| seçilmesi önerilir"],
+    ans: 1,
+    exp: "k çok küçük: sadece birkaç 'kavram' → önemli bilgi kaybolur. k çok büyük: gürültü de korunur, boyut azaltma etkisiz. Tipik k=100-300, koleksiyona göre cross-validation ile seçilir."
+  },
+  {
+    q: "Standing query nedir?",
+    opts: ["Kalıcı (sabit) Boolean sorgu","Zaman içinde koleksiyona eklenen yeni belgelere düzenli aralıklarla uygulanan sorgu","Tek bir terimi içeren basit sorgu","Kullanıcı araması için optimize edilmiş veritabanı sorgusu"],
+    ans: 1,
+    exp: "Standing query: 'multicore AND computer AND chip' gibi. Her sabah yeni haber makalelerine uygulanır. Yeni alakalı belgeler bulununca kullanıcıya bildirilir. Filtering/routing problemi: metin sınıflandırmanın özel hali."
+  },
+  {
+    q: "Rocchio sınıflandırıcısı doğrusal bir sınıflandırıcı mıdır?",
+    opts: ["Hayır, karar sınırı eğridir","Evet, karar sınırı hiper düzlemdir — centroid vektörlerinin eşit uzaklık noktaları","Hayır, k-NN gibi lokal karar verir","Evet ama yalnızca binary sınıflandırmada"],
+    ans: 1,
+    exp: "Rocchio doğrusal sınıflandırıcı. Sınıf centroidleri sabit. İki sınıf arasındaki karar sınırı, centroidlere eşit uzaklıktaki noktalar → hiper düzlem. NB de doğrusal. kNN ise doğrusal değil (lokal, nonlinear)."
+  }
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  const c = document.getElementById('quizContainer');
+  c.innerHTML = '';
+  score = 0; answered = 0;
+  updateScore();
+  questions.forEach((q, qi) => {
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;min-width:18px">${['A','B','C','D'][oi]})</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    c.innerHTML += `
+      <div class="q-card" id="qcard_${qi}">
+        <div class="q-num">Soru ${qi+1} / 15</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}"><strong>Açıklama:</strong> ${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(o => o.disabled = true);
+  const selected = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) { selected.classList.add('correct'); score++; }
+  else { selected.classList.add('wrong'); correct.classList.add('correct'); }
+  answered++;
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('scoreBar').style.width = pct + '%';
+  document.getElementById('scoreVal').textContent = `${score} / ${questions.length}`;
+}
+
+function resetQuiz() { buildQuiz(); }
+buildQuiz();
+</script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch10: Probabilistic Information Retrieval</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none;padding:0}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .tab-btn{padding:12px 16px;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 10: Probabilistic Information Retrieval</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al. Ch. 11</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ==================== LESSON ==================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 10.1 -->
+  <div class="card">
+    <h2>10.1 Temel Olasılık Teorisi</h2>
+    <p>Probabilistik IR, belirsizlik altında akıl yürütme için olasılık teorisini kullanır. Temel kavramlar:</p>
+
+    <pre><code>Bayes Teoremi:
+P(A|B) = P(B|A) · P(A) / P(B)
+
+Zincir Kuralı:
+P(A, B) = P(A|B) · P(B) = P(B|A) · P(A)
+
+Odds (Olasılık Oranı):
+O(A) = P(A) / P(A̅) = P(A) / (1 - P(A))</code></pre>
+
+    <div class="grid3">
+      <div class="g-card">
+        <h4>Prior P(A)</h4>
+        Herhangi bir kanıt olmadan A'nın olasılığı. Örn: P(belge alakalı) = R/N.
+      </div>
+      <div class="g-card">
+        <h4>Likelihood P(B|A)</h4>
+        A doğruyken B gözleminin olasılığı. Örn: P(terim ∈ belge | alakalı).
+      </div>
+      <div class="g-card">
+        <h4>Posterior P(A|B)</h4>
+        B gözleminden sonra A'nın güncellenen olasılığı. Hedef: P(alakalı | sorgu, belge).
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Neden Olasılık Oranı (Odds)?</strong>
+      Belgeleri sıralamak için P(R=1|d,q) / P(R=0|d,q) oranına bakmak yeterlidir. Bu oran arttıkça belge daha alakalı. Log-odds kullanmak hesaplamayı sadeleştirir: log-odds = log(p) − log(1-p).
+    </div>
+  </div>
+
+  <!-- 10.2 -->
+  <div class="card card-teal">
+    <h2>10.2 Olasılık Sıralama İlkesi (PRP)</h2>
+    <p>Van Rijsbergen (1979) tarafından formüle edilen <strong>Probability Ranking Principle (PRP)</strong>:</p>
+
+    <div class="success-box">
+      <strong>PRP Tanımı</strong>
+      Bir IR sisteminin her sorguya verdiği yanıt, kullanıcı tarafından sunulan bilgi ihtiyacına göre belgelerin azalan ilgi olasılığı sıralamasıysa — yani P(R=1|d,q) değerine göre — o zaman bu sıralama, mevcut verilerle elde edilebilecek en iyi genel etkinliği sağlar.
+    </div>
+
+    <h3>1/0 Kayıp Durumu</h3>
+    <p>Basit durumda her hata (FP veya FN) eşit maliyetlidir. Bayes optimal karar:</p>
+    <pre><code>d ilgili  iff  P(R=1|d,q) > P(R=0|d,q)
+d sıralaması: azalan P(R=1|d,q)'ye göre</code></pre>
+
+    <h3>Maliyet Modeli ile PRP</h3>
+    <p>FP maliyeti C₀, FN maliyeti C₁ olsun. PRP genelleştirilmiş olarak:</p>
+    <pre><code>C₀ · P(R=0|d) ≤ C₀ · P(R=0|d') için d, d'den önce alınır
+
+Medikal tanı: C₁ (FN) >> C₀ (FP) → yüksek recall tercih edilir
+Spam filtre: C₀ (FP) >> C₁ (FN) → yüksek precision tercih edilir</code></pre>
+
+    <div class="warning-box">
+      <strong>PRP'nin Sınırı</strong>
+      PRP ancak tüm olasılıklar doğru tahmin edilebiliyorsa optimaldir. Pratikte bu hiçbir zaman tam doğru değildir. Yine de güçlü bir teorik temel sağlar.
+    </div>
+  </div>
+
+  <!-- 10.3 -->
+  <div class="card card-purple">
+    <h2>10.3 Binary Independence Model (BIM)</h2>
+    <p>BIM, PRP'yi pratik uygulamaya taşıyan klasik olasılıksal modeldir. İki temel varsayım:</p>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Binary (İkili)</h4>
+        Belgeler ve sorgular ikili terim vektörleri olarak temsil edilir: x_t ∈ {0,1}. (VSM'deki tf-idf ağırlıkları yok.)
+      </div>
+      <div class="g-card">
+        <h4>Independence (Bağımsızlık)</h4>
+        Naive Bayes varsayımı: bir terimin varlığı diğer terimlerin varlığından bağımsızdır. Bu gerçekçi değil ama pratikte işe yarıyor.
+      </div>
+    </div>
+
+    <h3>BIM Çıkarımı</h3>
+    <pre><code>Hedef: P(R=1|x,q) / P(R=0|x,q) oranına göre sırala
+
+Bayes teoremi:
+O(R|x,q) = O(R|q) · Π_t [P(x_t|R=1,q) / P(x_t|R=0,q)]
+
+p_t = P(x_t=1 | R=1, q) ← alakalı belgede t terimi olasılığı
+u_t = P(x_t=1 | R=0, q) ← alakasız belgede t terimi olasılığı</code></pre>
+
+    <h3>RSV (Retrieval Status Value)</h3>
+    <p>Log-odds alarak RSV hesaplanır. Yalnızca sorguda geçen terimlere bakılır:</p>
+    <pre><code>RSV(d) = Σ_{t ∈ q ∩ d} log(p_t(1-u_t) / (u_t(1-p_t)))
+
+Sadeleştirme: u_t ≈ df_t / N varsayımıyla:
+RSV ≈ Σ_{t ∈ q ∩ d} log(N / df_t)   ← idf'e benzer!</code></pre>
+
+    <div class="success-box">
+      <strong>BIM ve IDF Bağlantısı</strong>
+      BIM'in basit uygulaması idf ağırlıklandırmasına benzer sonuçlar üretir. Bu, IDF'nin olasılıksal bir temele sahip olduğunu gösterir.
+    </div>
+  </div>
+
+  <!-- 10.4 -->
+  <div class="card card-amber">
+    <h2>10.4 BIM'de Olasılık Tahmini</h2>
+    <p>p_t ve u_t değerlerini tahmin etmek için training verisi gerekir. Eğer relevan belge kümesi biliniyorsa:</p>
+
+    <pre><code>Relevan kümesi biliniyorsa (RF sonrası):
+p_t = (r_t + 0.5) / (r + 1)   ← Laplace smoothing ile
+u_t = (n_t - r_t + 0.5) / (N - r + 1)
+
+r_t : relevan belgeler arasında t içerenlerin sayısı
+r   : toplam relevan belge sayısı
+n_t : koleksiyonda t içerenlerin sayısı = df_t
+N   : koleksiyondaki toplam belge sayısı</code></pre>
+
+    <h3>Başlangıç Tahminleri (RF Olmadan)</h3>
+    <p>Relevance feedback mevcut değilken:</p>
+    <pre><code>p_t ≈ 0.5   (uniform prior — her terim eşit olasılıklı)
+u_t ≈ df_t / N
+
+RSV ≈ Σ_{t ∈ q ∩ d} log((1-u_t)/u_t) = Σ log((N - df_t)/df_t)</code></pre>
+
+    <div class="info-box">
+      <strong>Robertson-Sparck Jones (RSJ) Ağırlıkları</strong>
+      w_t = log[p_t(1-u_t) / (u_t(1-p_t))]. Bu ağırlıklar, relevan feedback verisiyle iteratif olarak güncellenebilir. Rocchio algoritmasının olasılıksal karşılığıdır.
+    </div>
+  </div>
+
+  <!-- 10.5 -->
+  <div class="card card-red">
+    <h2>10.5 BM25 (Okapi BM25)</h2>
+    <p>BIM'in yetersizliği: term frequency (tf) ve belge uzunluğu dikkate alınmaz. <strong>BM25</strong> bu eksiklikleri giderir:</p>
+
+    <pre><code>BM25 skoru:
+RSV_BM25 = Σ_{t ∈ q} log(N/df_t) · tf_{t,d}/(k₁·((1-b)+b·L_d/L_avg) + tf_{t,d})
+
+L_d    : belge d'nin uzunluğu
+L_avg  : ortalama belge uzunluğu
+k₁     : tf saturation parametresi (tipik: 1.2–2.0)
+b      : uzunluk normalizasyon parametresi (tipik: 0.75)</code></pre>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>k₁ parametresi</h4>
+        k₁→0: tf görmezden gelinir (binary). k₁→∞: ham tf kullanılır. k₁=1.5 tipik; tf büyürken azalan getiri (diminishing returns).
+      </div>
+      <div class="g-card">
+        <h4>b parametresi</h4>
+        b=0: uzunluk normalizasyonu yok. b=1: tam normalizasyon. b=0.75 tipik; kısmen normalize eder.
+      </div>
+    </div>
+
+    <div class="success-box">
+      <strong>BM25 Web Arama Motorlarında</strong>
+      BM25, modern arama motorlarının temel sıralama bileşenlerinden biridir. TF-IDF'den önemli ölçüde daha iyi performans gösterir çünkü hem tf hem belge uzunluğunu dengeler.
+    </div>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card" style="background:#1a3a6e;color:#fff;border:none">
+    <h2 style="color:#fff;border-bottom-color:rgba(255,255,255,.2)">Hızlı Başvuru Kartı</h2>
+    <table style="color:#e0e8f8">
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>PRP</strong></td><td>Belgeleri azalan P(R=1|d,q)'ye göre sırala → optimal</td></tr>
+      <tr><td><strong>BIM varsayımları</strong></td><td>Binary terim vektörleri + Naive Bayes bağımsızlık</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>p_t</strong></td><td>P(terim|alakalı) — alakalı belgede terimin görünme olasılığı</td></tr>
+      <tr><td><strong>u_t</strong></td><td>P(terim|alakasız) ≈ df_t/N</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>RSV</strong></td><td>Σ log(p_t(1-u_t)/(u_t(1-p_t))) — sıralama skoru</td></tr>
+      <tr><td><strong>RSV ≈ IDF</strong></td><td>p_t=0.5 varsayımıyla RSV → log(N/df_t) = IDF</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>BM25</strong></td><td>BIM + tf + uzunluk normalizasyonu; k₁≈1.5, b≈0.75</td></tr>
+      <tr><td><strong>RSJ ağırlıkları</strong></td><td>RF ile güncellenen p_t, u_t → daha iyi terim ağırlıkları</td></tr>
+    </table>
+  </div>
+
+</div>
+</div><!-- /lesson -->
+
+<!-- ==================== QUIZ ==================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Skor</span>
+    <div class="score-track"><div class="score-fill" id="scoreBar" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Başla</button>
+</div>
+</div>
+
+<!-- ==================== CLASSIC ==================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="info-box" style="margin-bottom:24px">
+    <strong>Nasıl Çalışır?</strong>
+    Her sorunun başlığına tıkla → Soruyu gör ve kendi cevabını düşün → Tekrar tıkla → Model cevabı aç.
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — Bayes Teoremi ile P(R|d,q) Hesabı</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Koleksiyonda N=1000, toplam alakalı belge r=50. "neural" terimi n_t=100 belgede geçiyor, bunların r_t=30'u alakalı. Laplace smoothing ile p_t ve u_t'yi hesaplayın. Bu terimin RSV katkısını bulun.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <pre><code>p_t = (r_t + 0.5) / (r + 1) = (30 + 0.5) / (50 + 1) = 30.5/51 ≈ 0.598
+u_t = (n_t - r_t + 0.5) / (N - r + 1)
+    = (100 - 30 + 0.5) / (1000 - 50 + 1)
+    = 70.5 / 951 ≈ 0.074
+
+RSV katkı = log(p_t(1-u_t) / (u_t(1-p_t)))
+           = log(0.598 × 0.926 / (0.074 × 0.402))
+           = log(0.554 / 0.0298)
+           = log(18.6) ≈ 2.92</code></pre>
+      <div class="success-box">Yüksek RSV katkı (2.92): "neural" terimi alakalı belgelerde çok sık (p_t=0.60), alakasız belgelerde nadir (u_t=0.07). Bu terim çok iyi ayrıştırıcı.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — PRP ve Maliyet Modeli</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> İki uygulama: (a) Kanser taraması (b) Spam filtresi. Her biri için C₀ (FP maliyeti) ve C₁ (FN maliyeti) karşılaştırmasını yapın. PRP'nin maliyet modeline göre hangisi daha yüksek recall, hangisi daha yüksek precision hedefler?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a) Kanser taraması:</strong></p>
+      <ul>
+        <li>FP (kanser yok ama pozitif = yanlış alarm): hasta gereksiz biyopsi — rahatsız edici ama düzeltilebilir.</li>
+        <li>FN (kanser var ama negatif = kaçırılmış tanı): hayati tehlike — düzeltilemez.</li>
+        <li>C₁ >> C₀ → Yüksek recall hedefle. Daha düşük eşik: daha fazla pozitif → daha az FN.</li>
+      </ul>
+      <p><strong>(b) Spam filtresi:</strong></p>
+      <ul>
+        <li>FP (spam değil ama spam sayılmış = önemli e-posta kaçırıldı): iş kaybı, kritik bilgi kaçırma.</li>
+        <li>FN (spam ama gelen kutusu = spam geçti): can sıkıcı ama az maliyetli.</li>
+        <li>C₀ >> C₁ → Yüksek precision hedefle. Daha yüksek eşik: az FP.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — BIM Varsayımları ve Sınırları</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> BIM'in iki temel varsayımını açıklayın. Bu varsayımlar pratikte ne kadar gerçekçidir? Hangi durumlarda BIM ciddi ölçüde başarısız olur?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Varsayım 1: Binary gösterim.</strong> tf (term frequency) dikkate alınmaz; terim var/yok olarak modellenir. Gerçekçi değil: "cancer" 10 kez geçen belge daha alakalıdır.</p>
+      <p><strong>Varsayım 2: Term independence (Naive Bayes).</strong> Terimlerin varlığı birbirinden bağımsızdır. Gerçekçi değil: "New" ve "York" genellikle birlikte geçer.</p>
+      <p><strong>BIM'in başarısız olduğu durumlar:</strong></p>
+      <ul>
+        <li>Yüksek term co-occurrence: "machine" + "learning" birlikte alakalı → bağımsızlık varsayımı çöker.</li>
+        <li>Uzun belgeler: tf dikkate alınmadığı için uzun belgeler avantaj elde edemez.</li>
+        <li>Terim ağırlığı kritik olduğunda: "cancer" vs "minor cancer scare" farkı yakalanmaz.</li>
+      </ul>
+      <div class="success-box">Çözüm: BM25, hem tf hem belge uzunluğunu BIM çerçevesine ekler → çok daha iyi performans.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — BM25 Parametreleri</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> BM25'te k₁=1.5 ve b=0.75 parametrelerinin etkisini açıklayın. k₁=0 ve b=0 durumlarında BM25 neye dönüşür? Kısa belgeler mi uzun belgeler mi avantajlı olur?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>k₁ etkisi (tf saturation):</strong></p>
+      <pre><code>tf normalizasyonu: tf_norm = tf / (k₁·(1-b+b·L/L_avg) + tf)
+
+k₁=0: tf_norm → tf/(0+tf) = 1 (tf görmezden, sadece varlık)
+k₁→∞: tf_norm → tf/k₁ (ham tf kullanılır)
+k₁=1.5: azalan getiri — 1. oluşum en değerli, sonrakiler azalır</code></pre>
+      <p><strong>b etkisi (uzunluk normalizasyonu):</strong></p>
+      <pre><code>b=0: uzunluk normalizasyonu yok → uzun belgeler avantajlı
+b=1: tam normalizasyon → uzun kısa eşit
+b=0.75: kısmi — bir miktar uzunluk avantajı korunur</code></pre>
+      <div class="info-box">k₁=0, b=0 → BM25 = IDF sıralama (binary, uzunluk yok). Bu BIM'in p_t=0.5 varsayımıyla başlangıç haliyle aynıdır.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — RSV ve IDF Bağlantısı</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> BIM'de p_t=0.5 varsayımı yapıldığında RSV formülünün IDF'ye eşdeğer olduğunu gösterin. Bu bağlantı ne anlama gelir?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <pre><code>p_t = 0.5 (uniform prior)
+u_t ≈ df_t / N
+
+RSV katkı = log[p_t(1-u_t) / (u_t(1-p_t))]
+           = log[0.5·(1 - df_t/N) / ((df_t/N)·0.5)]
+           = log[(1 - df_t/N) / (df_t/N)]
+           = log[(N - df_t) / df_t]
+           ≈ log[N / df_t]   (N >> df_t için)
+           = IDF!</code></pre>
+      <div class="success-box">
+        <strong>Anlamı:</strong> IDF ağırlıklandırması, BIM'in en basit (p_t=0.5) varsayımından türetilir. Bu, IDF'nin neden işe yaradığını olasılıksal olarak açıklar — tamamen sezgisel bir metrik değil, teorik temeli var.
+      </div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /classic -->
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+const questions = [
+  {
+    q: "Probability Ranking Principle (PRP) ne der?",
+    opts: ["Belgeler IDF değerine göre sıralanmalıdır","IR sistemi belgeleri azalan P(R=1|d,q) sırasında gösterirse mevcut verilerle mümkün olan en iyi etkinliği sağlar","Belgeler önce document frequency'ye göre filtrelenmeli","Boolean model ranked retrieval'dan her zaman daha iyidir"],
+    ans: 1,
+    exp: "PRP (van Rijsbergen, 1979): belgeleri P(R=1|d,q)'nin azalan sırasında döndür → optimal sıralama. 1/0 kayıp varsayımı altında Bayes optimal karar kuralıdır."
+  },
+  {
+    q: "BIM'deki 'Binary' ne anlama gelir?",
+    opts: ["Yalnızca iki terim kullanılır","Belgeler ve sorgular ikili (0/1) terim incidence vektörleri olarak temsil edilir","Yalnızca iki sınıf: alakalı ve alakasız","Index iki katmanlı yapıdadır"],
+    ans: 1,
+    exp: "BIM'de her terim için x_t ∈ {0,1}: 1 terim belgede var, 0 yok. tf (term frequency) dikkate alınmaz. Basit ama etkili bir yaklaşım — BIM = multivariate Bernoulli Naive Bayes."
+  },
+  {
+    q: "BIM'deki bağımsızlık varsayımı ne der?",
+    opts: ["Tüm belgeler birbirinden bağımsızdır","Bir terimin belgede bulunması diğer terimlerin varlığından bağımsızdır (Naive Bayes)","Her sorgu terimi bağımsız bir bilgi ihtiyacını temsil eder","Relevan ve non-relevan belgeler eşit sayıdadır"],
+    ans: 1,
+    exp: "Naive Bayes bağımsızlık varsayımı: P(x₁,x₂,...,xM|R) = Π P(x_t|R). Pratikte yanlış (terimler arasında korelasyon var) ama hesaplamayı çok kolaylaştırır ve iyi sonuçlar verir."
+  },
+  {
+    q: "p_t ve u_t ne anlama gelir?",
+    opts: ["p_t: precision at t; u_t: utility at t","p_t: alakalı belgede terimin görünme olasılığı; u_t: alakasız belgede görünme olasılığı","p_t: terimin precision değeri; u_t: recall değeri","p_t: posterior; u_t: prior olasılık"],
+    ans: 1,
+    exp: "p_t = P(x_t=1 | R=1, q): ilgili bir belgede t teriminin bulunma olasılığı. u_t = P(x_t=1 | R=0, q): alakasız belgede t'nin bulunma olasılığı. RSV = Σ log(p_t(1-u_t)/(u_t(1-p_t)))."
+  },
+  {
+    q: "p_t = 0.5 varsayımı altında BIM'in RSV skoru neye eşdeğerdir?",
+    opts: ["TF-IDF","IDF","Cosine similarity","PageRank"],
+    ans: 1,
+    exp: "p_t=0.5 ve u_t≈df_t/N iken RSV ≈ Σ log(N/df_t) = IDF. Bu, IDF'nin olasılıksal bir temele sahip olduğunu gösterir: BIM'in en basit özel halidir."
+  },
+  {
+    q: "BIM'in IDF'den temel üstünlüğü nedir?",
+    opts: ["BIM her zaman daha hızlıdır","BIM, relevance feedback ile p_t ve u_t tahminlerini iteratif olarak güncelleyebilir","BIM daha az hesaplama gerektirir","BIM Boolean sorguları destekler"],
+    ans: 1,
+    exp: "BIM'in en büyük avantajı: relevance feedback ile p_t ve u_t güncellenir. Kullanıcı R/NR işaretledikçe terim ağırlıkları iyileşir. IDF statik kalır, BIM adaptiftir."
+  },
+  {
+    q: "BM25'te k₁ parametresi ne kontrol eder?",
+    opts: ["Belge uzunluğu normalizasyonu","TF saturation — yüksek tf değerinin etkisini sınırlar (azalan getiri)","Sorgu terimlerinin sayısı","IDF değerinin ağırlığı"],
+    ans: 1,
+    exp: "k₁: TF saturation parametresi. k₁=0 → tf görmezden (binary). k₁→∞ → ham tf. k₁=1.5 tipik: tf arttıkça skor da artar ama azalan hızda (diminishing returns). Tekrar eden terimler çok avantajlı olmaz."
+  },
+  {
+    q: "BM25'te b=0 ne anlama gelir?",
+    opts: ["TF tamamen yok sayılır","Belge uzunluğu normalizasyonu uygulanmaz — uzun belgeler avantajlı","Sorgu terimleri eşit ağırlıklı","IDF faktörü kaldırılır"],
+    ans: 1,
+    exp: "b=0: uzunluk normalizasyon terimi (L_d/L_avg) sıfırlanır. Belge uzunluğu dikkate alınmaz → uzun belgeler tf açısından avantajlı. b=1: tam normalizasyon. b=0.75 tipik (kısmi)."
+  },
+  {
+    q: "Laplace smoothing neden p_t hesabında kullanılır?",
+    opts: ["Hesaplamayı hızlandırmak için","Sıfır olasılık sorununu önlemek — eğitim verisinde görülmeyen olaylar için sıfır olasılık verilmez","Maksimum likelihood tahminini geliştirmek","Index boyutunu küçültmek"],
+    ans: 1,
+    exp: "Eğer r_t=0 olursa p_t=0/r=0 → sıfır olasılık → log hesaplanmaz. Laplace smoothing: p_t=(r_t+0.5)/(r+1) → her zaman pozitif. Add-0.5 smoothing olarak da bilinir."
+  },
+  {
+    q: "PRP'nin optimal olma koşulu nedir?",
+    opts: ["Koleksiyonun büyük olması","Tüm olasılıkların doğru tahmin edilmesi","Boolean retrieval kullanılmaması","Relevance feedback uygulanması"],
+    ans: 1,
+    exp: "PRP teoremi: 1/0 kayıp altında minimum beklenen kayıp için belgeler P(R=1|d,q)'ye göre sıralanmalıdır. Ancak olasılıklar mükemmel bilinmiyorsa (pratikte hiçbir zaman böyle değil) bu optimallık garantisi geçerli olmaz."
+  },
+  {
+    q: "RSV (Retrieval Status Value) ne ölçer?",
+    opts: ["Belgedeki toplam terim sayısı","Sorgu-belge çifti için logaritmik olasılık oranı — sıralama skoru","Belgenin IDF ağırlıklı uzunluğu","Relevan ve non-relevan belge sayısı farkı"],
+    ans: 1,
+    exp: "RSV = Σ_{t∈q∩d} log(p_t(1-u_t)/(u_t(1-p_t))). Bu log-odds oranıdır: bir terimin alakalı belgede alakasız belgeden ne kadar daha sık geçtiğinin logaritması. Yüksek RSV → yüksek alaka."
+  },
+  {
+    q: "BIM neden sadece sorguda VE belgede geçen terimleri hesaba katar?",
+    opts: ["Diğer terimler sıfır katkı sağlar","Terimi içermeyen belgeler otomatik alakasız kabul edilir","Matematik zorunluluğu","Index boyutunu küçültmek için"],
+    ans: 0,
+    exp: "q_t=0 olan terimler (sorguda geçmeyenler) ortak bir faktörün parçası olarak RSV hesabına girmez. q_t=1 ama d_t=0 olan terimler de log(1-p_t)/(1-u_t) katkısı sağlar ama bu genellikle küçüktür ve ihmal edilir."
+  },
+  {
+    q: "Odds (olasılık oranı) neden sıralamada kullanılır?",
+    opts: ["Odds her zaman precision'ı maksimize eder","Odds ve olasılık monoton ilişkili — odds arttıkça P(R=1) artar; odds log-liner formülde daha kolay hesaplanır","Odds bağımsızlık varsayımını ortadan kaldırır","Odds tüm terimleri eşit ağırlıklandırır"],
+    ans: 1,
+    exp: "O(A) = P(A)/(1-P(A)) monoton artan bir fonksiyondur. Belgeleri P(R=1|d,q)'ye göre sıralamak, odds'a göre sıralamakla aynı sonucu verir. Log-odds alınca çarpma log'a dönüşür → hesaplama kolaylaşır."
+  },
+  {
+    q: "BIM'in 'independence' varsayımı hangi modelle aynıdır?",
+    opts: ["Vector Space Model","Multivariate Bernoulli Naive Bayes","k-Nearest Neighbor","SVM (Support Vector Machine)"],
+    ans: 1,
+    exp: "BIM tam olarak multivariate Bernoulli Naive Bayes modeline karşılık gelir. Her iki model de terim varlık/yokluğunun bağımsız olduğunu varsayar. BIM, probabilistic IR için NB'nin özel bir uygulamasıdır."
+  },
+  {
+    q: "Robertson-Sparck Jones (RSJ) ağırlıkları ne sağlar?",
+    opts: ["Sabit IDF ağırlıkları","Relevance feedback ile iteratif güncellenen p_t ve u_t → daha doğru terim ağırlıkları","Belge uzunluğu normalizasyonu","Query expansion önerileri"],
+    ans: 1,
+    exp: "RSJ ağırlıkları: w_t = log[p_t(1-u_t)/(u_t(1-p_t))]. Kullanıcı relevan/non-relevan işaretledikçe p_t ve u_t güncellenir → w_t iyileşir. Rocchio'nun olasılıksal karşılığıdır — feedback ile öğrenen terim ağırlıkları."
+  }
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  const c = document.getElementById('quizContainer');
+  c.innerHTML = '';
+  score = 0; answered = 0;
+  updateScore();
+  questions.forEach((q, qi) => {
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;min-width:18px">${['A','B','C','D'][oi]})</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    c.innerHTML += `
+      <div class="q-card" id="qcard_${qi}">
+        <div class="q-num">Soru ${qi+1} / 15</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}"><strong>Açıklama:</strong> ${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(o => o.disabled = true);
+  const selected = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) { selected.classList.add('correct'); score++; }
+  else { selected.classList.add('wrong'); correct.classList.add('correct'); }
+  answered++;
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('scoreBar').style.width = pct + '%';
+  document.getElementById('scoreVal').textContent = `${score} / ${questions.length}`;
+}
+
+function resetQuiz() { buildQuiz(); }
+buildQuiz();
+</script>
+</body>
+</html>

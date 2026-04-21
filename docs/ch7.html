@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch7: Efficient Scoring & Ranking</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none;padding:0}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-purple h2{color:#3C3489}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:100px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+.reset-btn:hover{background:#0f2448}
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+.classic-body pre{font-size:.82rem}
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 16px;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 7: Efficient Scoring &amp; IR System Components</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 15 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ==================== LESSON ==================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- 7.1 -->
+  <div class="card">
+    <h2>7.1 Verimli Skorlama Problemi</h2>
+    <p>COSINESCORE algoritması her sorgu için tüm koleksiyonu tarar → O(N·|V|) hesaplama. Büyük web koleksiyonlarında bu pratik değildir. Amaç: tam cosine skorlamasına yakın sonuçlar üretmek ama çok daha hızlı.</p>
+
+    <div class="warning-box">
+      <strong>Temel Gereksinim</strong>
+      Kullanıcıya yalnızca top-k (genellikle k=10) belge gösterilir. Tüm N belgeyi skorlamak yerine yalnızca "iyi aday" belgeleri değerlendirmek yeterlidir.
+    </div>
+
+    <h3>İki Ana Yaklaşım</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>1. Aday Kümesi Küçültme</h4>
+        Skorlanacak belge sayısını azalt. Tüm postings listelerini değil, sadece yüksek kaliteli alt kümeleri değerlendir.
+      </div>
+      <div class="g-card">
+        <h4>2. Hesaplamayı Hızlandırma</h4>
+        Seçilen adaylar için skorlamayı daha verimli yap. Impact-ordered postings, erken durdurma (early termination).
+      </div>
+    </div>
+  </div>
+
+  <!-- 7.2 -->
+  <div class="card card-teal">
+    <h2>7.2 Champion Lists (Fancy Lists)</h2>
+    <p>Her terim t için index zamanında en yüksek tf değerine sahip r belgeyi sakla. Bu listeye <strong>champion list</strong> veya <strong>fancy list</strong> denir.</p>
+
+    <h3>Nasıl Çalışır?</h3>
+    <ol>
+      <li>Her terim t için tüm postings listeleri yerine yalnızca tf(t,d) değeri en yüksek r belge seçilir.</li>
+      <li>Sorgu geldiğinde champion listeler birleştirilir ve bu küçük küme üzerinde cosine hesaplanır.</li>
+      <li>r, k'dan büyük olmalıdır (r ≥ k); aksi halde top-k bulunamayabilir.</li>
+    </ol>
+
+    <div class="info-box">
+      <strong>Avantaj &amp; Dezavantaj</strong>
+      Avantaj: İndex zamanında hazırlanır → sorgu sırasında sıfır ek hesaplama. Dezavantaj: r seçimi kritik; çok küçük r gerçek top-k'yı kaçırabilir.
+    </div>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>r &gt; k olmalı</h4>
+        Birden fazla sorgu terimi olduğunda champion listelerinin birleşimi k'dan az belge içerebilir. r ≈ 100–1000 tipik değerler.
+      </div>
+      <div class="g-card">
+        <h4>Static Quality Score</h4>
+        tf yerine tf + PageRank gibi bir kalite skoru kullanılabilir → champion list daha iyi belgeler içerir.
+      </div>
+    </div>
+  </div>
+
+  <!-- 7.3 -->
+  <div class="card card-purple">
+    <h2>7.3 Static Quality Scores &amp; Authority</h2>
+    <p>Belgelerin alaka düzeyinden bağımsız bir <strong>statik kalite skoru</strong> g(d) vardır. Örnek: PageRank, sayfa popülaritesi, editöryal derecelendirme.</p>
+
+    <h3>Net Score</h3>
+    <pre><code>net-score(q, d) = g(d) + cosine(q, d)</code></pre>
+    <p>g(d), index zamanında hesaplanır ve her belge için saklanır. Sorgu sırasında cosine'e eklenir.</p>
+
+    <h3>Global Champion Lists (High-Quality Docs)</h3>
+    <p>Her terim t için yalnızca g(d) skoru en yüksek r belgeyi tut. Bu, hem kaliteli hem de konuyla ilgili sonuçlar üretir.</p>
+
+    <div class="success-box">
+      <strong>Web'de Uygulama</strong>
+      PageRank gibi link analizi tabanlı g(d) skoru, spam sayfaları doğal olarak aşağı iter. Yüksek g(d) belgeler champion listede yer alır.
+    </div>
+
+    <h3>Tiered Indexes (Kademeli Dizinler)</h3>
+    <p>Tek bir postings listesi yerine birden fazla tier (katman) oluştur:</p>
+    <table>
+      <tr><th>Tier</th><th>Kriter</th><th>Boyut</th></tr>
+      <tr><td><strong>Tier 1</strong></td><td>Yüksek tf VE yüksek g(d)</td><td>Küçük</td></tr>
+      <tr><td><strong>Tier 2</strong></td><td>Orta tf veya g(d)</td><td>Orta</td></tr>
+      <tr><td><strong>Tier 3</strong></td><td>Tüm belgeler</td><td>Tam boyut</td></tr>
+    </table>
+    <p>Sorgu: Önce Tier 1'i ara. Yeterli sonuç varsa dur; yoksa Tier 2'ye geç; hâlâ yetersizse Tier 3.</p>
+  </div>
+
+  <!-- 7.4 -->
+  <div class="card card-amber">
+    <h2>7.4 Impact-Ordered Postings</h2>
+    <p>Klasik postings listesi docID sırasına göre sıralanır. <strong>Impact ordering</strong>: postings listelerini tf·idf değerine göre azalan sırada sakla.</p>
+
+    <h3>Early Termination (Erken Durdurma)</h3>
+    <p>İki strateji:</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Strateji A: Eşik Tabanlı</h4>
+        İlk r belgeden sonra dur. Yüksek impact'lı belgeler önce geldiğinden erken durdurma iyi sonuçlar verir.
+      </div>
+      <div class="g-card">
+        <h4>Strateji B: İdf Eşiği</h4>
+        Düşük idf'li (yaygın) terimlerin postings listelerini taramayı erken bitir; bu terimler ayrım yapmaz.
+      </div>
+    </div>
+
+    <div class="warning-box">
+      <strong>Dezavantaj</strong>
+      DAAT (Document-at-a-Time) işleme ile uyumsuz olabilir. Ayrıca tam cosine yerine yaklaşık sonuçlar üretir — güvenlik açısından kritik uygulamalar için uygun değildir.
+    </div>
+
+    <h3>WAND (Weak AND) Algoritması</h3>
+    <p>Her postings listesi için üst sınır (upper bound) hesapla. Pivot seçerek erken durdurma yap:</p>
+    <pre><code>Her terim için UB(t) = max_d(tf-idf(t,d)) hesapla
+Postings listelerini UB'ye göre sırala
+Pivot = UB toplamı ≥ threshold olan ilk terim
+Pivot'un belgesini tam skorla; yetersizse atla</code></pre>
+  </div>
+
+  <!-- 7.5 -->
+  <div class="card card-red">
+    <h2>7.5 Cluster Pruning</h2>
+    <p>Koleksiyondaki belgeleri kümele (cluster) ve sorgu belgeleri yerine küme temsilcilerini karşılaştır.</p>
+
+    <h3>Algoritma</h3>
+    <ol>
+      <li>√N rastgele belge seç → <strong>leader</strong> (küme lideri).</li>
+      <li>Her non-leader belge, en yakın liderine atanır → bir küme oluşturur.</li>
+      <li>Sorgu geldiğinde: sorguya en yakın b lider bul, bu liderlerin kümeleri içinde top-k ara.</li>
+    </ol>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Avantaj</h4>
+        O(√N) karmaşıklığı. N=1M için 1000 lider — çok hızlı. Index zamanında kümeleme yapılır.
+      </div>
+      <div class="g-card">
+        <h4>Dezavantaj</h4>
+        Rastgele lider seçimi gerçek top-k'yı garantilemez. b=1 ise yalnızca bir küme taranır → yanlış sonuç riski.
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>b Parametresi</strong>
+      b lider seçmek ve onların kümelerini taramak erişimi artırır (better recall) ama hızı düşürür. Tipik: b=1 veya b=2.
+    </div>
+  </div>
+
+  <!-- 7.6 -->
+  <div class="card">
+    <h2>7.6 IR Sistem Bileşenleri</h2>
+    <p>Tam bir IR sistemi birden fazla bileşenden oluşur:</p>
+
+    <div class="flow">
+      <div class="flow-box">Crawler / Belge Toplama</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Metin İşleme</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Index İnşası</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Sorgu İşleme</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Ranking &amp; Sonuç</div>
+    </div>
+
+    <h3>Sorgu İşleme: DAAT vs TAAT</h3>
+    <table>
+      <tr><th>Yöntem</th><th>Açıklama</th><th>Avantaj</th></tr>
+      <tr><td><strong>DAAT</strong></td><td>Document-At-A-Time: her belge için tüm terimlerin katkısını birleştir</td><td>Düşük bellek kullanımı</td></tr>
+      <tr><td><strong>TAAT</strong></td><td>Term-At-A-Time: her terim için tüm postings'i işle, akümülatör güncelle</td><td>Basit implementasyon</td></tr>
+    </table>
+
+    <h3>Akkümülatör Vektörü</h3>
+    <p>TAAT'ta her belge için bir akkümülatör A[d] tutulur. Her postings listesi taranırken:</p>
+    <pre><code>for each term t in query:
+    for each (d, tf) in postings(t):
+        A[d] += tf(t,d) * idf(t)
+top-k = argmax_d A[d]</code></pre>
+    <p>Sorun: A tüm koleksiyon boyutunda olabilir → bellek problemi. Çözüm: yalnızca aktif akkümülatörleri (non-zero) tut.</p>
+
+    <h3>Inexact Top-k Retrieval Özeti</h3>
+    <table>
+      <tr><th>Teknik</th><th>Fikir</th><th>Garanti</th></tr>
+      <tr><td>Champion Lists</td><td>Her terim için en iyi r belge sakla</td><td>Hayır (yaklaşık)</td></tr>
+      <tr><td>Tiered Indexes</td><td>Kaliteye göre katmanlı index</td><td>Hayır (yaklaşık)</td></tr>
+      <tr><td>Impact Ordering</td><td>Postings'i impact'a göre sırala, erken dur</td><td>Hayır (yaklaşık)</td></tr>
+      <tr><td>Cluster Pruning</td><td>Küme temsilcilerini karşılaştır</td><td>Hayır (yaklaşık)</td></tr>
+      <tr><td>WAND</td><td>Upper bound ile belgeleri atla</td><td>Evet (tam top-k)</td></tr>
+    </table>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="card" style="background:#1a3a6e;color:#fff;border:none">
+    <h2 style="color:#fff;border-bottom-color:rgba(255,255,255,.2)">Hızlı Başvuru Kartı</h2>
+    <table style="color:#e0e8f8">
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Champion List</strong></td><td>Her terim için en yüksek tf'li r belge → index zamanında hazır</td></tr>
+      <tr><td><strong>g(d)</strong></td><td>Statik kalite skoru (PageRank gibi), alaka bağımsız</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Tiered Index</strong></td><td>Tier 1 → önce tara; yetersizse Tier 2, sonra Tier 3</td></tr>
+      <tr><td><strong>Impact Ordering</strong></td><td>Postings tf·idf'e göre sıralı → erken durdurma mümkün</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>Cluster Pruning</strong></td><td>√N lider seç; sorgu → lider → küme</td></tr>
+      <tr><td><strong>WAND</strong></td><td>Upper bound tabanlı, tam top-k garantili erken durdurma</td></tr>
+      <tr style="background:rgba(255,255,255,.1)"><td><strong>DAAT</strong></td><td>Belge bazlı işleme, düşük bellek</td></tr>
+      <tr><td><strong>TAAT</strong></td><td>Terim bazlı işleme, akkümülatör vektörü</td></tr>
+    </table>
+  </div>
+
+</div>
+</div><!-- /lesson -->
+
+<!-- ==================== QUIZ ==================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Skor</span>
+    <div class="score-track"><div class="score-fill" id="scoreBar" style="width:0%"></div></div>
+    <span class="score-val" id="scoreVal">0 / 15</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Başla</button>
+</div>
+</div>
+
+<!-- ==================== CLASSIC ==================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="info-box" style="margin-bottom:24px">
+    <strong>Nasıl Çalışır?</strong>
+    Her sorunun başlığına tıkla → Soruyu gör ve kendi cevabını düşün → Tekrar tıkla → Model cevabı aç.
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — Champion List Tasarımı</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> 1.000.000 belgeli bir koleksiyonda top-10 sonuç isteniyor. Champion list boyutu r için hangi değeri seçersiniz ve neden? r=10, r=100, r=1000 seçeneklerini karşılaştırın. Çok küçük r seçiminin riski nedir?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>r=10:</strong> Çok riskli. Birden fazla sorgu terimi varsa champion listeler birleştiğinde 10'dan az belge kalabilir; top-10 tamamlanamaz.</p>
+      <p><strong>r=100:</strong> Makul başlangıç. Çoğu sorgu için yeterli aday sağlar ama kenar durumlarda yetersiz kalabilir.</p>
+      <p><strong>r=1000:</strong> Güvenli ama daha büyük index. Yüksek recall garantisi, ancak sorgu sırasında 1000 belgeyi skorlamak gerekir.</p>
+      <div class="success-box"><strong>Öneri:</strong> r &gt; k · |q| kuralı kullanılır; |q| sorgu terim sayısı. k=10, |q|=5 için r ≥ 50 olmalı. Pratikte r=500–1000 güvenli bölgedir.</div>
+      <p><strong>Küçük r riski:</strong> Gerçek top-k'daki belgeler champion listede yer almayabilir → yanlış sonuç. Bu bir <em>yaklaşık</em> algoritmadır, kesin değildir.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — Tiered Index ile Sorgu İşleme</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> 3 kademeli (tiered) bir index var. Tier 1 kriteri: tf ≥ 5 VE g(d) ≥ 0.8. Tier 2 kriteri: tf ≥ 2 VE g(d) ≥ 0.5. Tier 3: tümü. "machine learning" sorgusu için Tier 1'de 3 sonuç, Tier 2'de 15 sonuç bulundu. k=10 ise işlem nasıl ilerler?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>Adım 1:</strong> Tier 1'e bak → 3 sonuç, k=10'dan az → yeterli değil.</p>
+      <p><strong>Adım 2:</strong> Tier 2'ye geç → 15 sonuç. Tier 1 + Tier 2 = 18 aday → k=10 için yeterli.</p>
+      <p><strong>Adım 3:</strong> 18 aday arasından cosine skoru hesapla, top-10'u döndür. Tier 3'e gerek yok.</p>
+      <div class="info-box"><strong>Önemli:</strong> Tier 2 arayışı Tier 1'i <em>tamamlar</em>, değiştirmez. İki tier'dan gelen 18 belgenin tamamı skorlanır.</div>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — Cluster Pruning Analizi</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> N=10.000 belgeli koleksiyonda cluster pruning uygulanıyor. (a) Kaç lider seçilir? (b) b=1 ile b=2 arasındaki farkı açıklayın. (c) Bu yöntem neden tam top-k garantisi vermez?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>(a)</strong> Lider sayısı = √N = √10.000 = <strong>100 lider</strong>. Her küme ortalama 100 belge içerir.</p>
+      <p><strong>(b) b=1:</strong> En yakın 1 lider seçilir → 100 belge taranır. Hızlı ama coverage düşük.<br>
+      <strong>b=2:</strong> En yakın 2 lider seçilir → ~200 belge taranır. Daha iyi recall, biraz yavaş.</p>
+      <p><strong>(c)</strong> Gerçek top-k belgeler farklı kümelerde dağılmış olabilir. Liderler rastgele seçildiğinden en iyi belgelerin her zaman aynı kümede olacağı garanti edilmez. Bu bir <em>yaklaşık</em> yöntemdir.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — DAAT vs TAAT Karşılaştırması</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> "neural network training" sorgusu için DAAT ve TAAT algoritmalarının işleyişini açıklayın. Her birinin bellek ve hız açısından avantaj/dezavantajını tartışın.</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>DAAT (Document-At-A-Time):</strong></p>
+      <pre><code>Tüm postings listelerini eş zamanlı tara.
+Aynı docID için tüm terimlerin katkısını topla, skoru hesapla.
+Min-heap ile top-k güncelle.
+Bellek: O(|q|) — sadece her terim için bir gösterici.</code></pre>
+      <p><strong>TAAT (Term-At-A-Time):</strong></p>
+      <pre><code>Her terim için postings listesini tarama:
+  "neural" → A[d1]+=2.1, A[d5]+=1.8, ...
+  "network" → A[d1]+=1.5, A[d3]+=2.0, ...
+  "training" → A[d2]+=3.1, A[d1]+=0.9, ...
+Son: top-k için A vektörünü sırala.</code></pre>
+      <table>
+        <tr><th></th><th>DAAT</th><th>TAAT</th></tr>
+        <tr><td>Bellek</td><td>O(|q|) — düşük</td><td>O(N) — yüksek (tüm A vektörü)</td></tr>
+        <tr><td>Hız</td><td>Impact ordering ile çok hızlı</td><td>Tüm postings taranır</td></tr>
+        <tr><td>Erken dur</td><td>Kolay (WAND)</td><td>Zor</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — Impact Ordering ve Early Termination</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> "data science" sorgusu için impact-ordered postings kullanılıyor. "data" terimi için postings (azalan tf·idf): [(d3,4.2),(d1,3.8),(d7,2.1),(d2,1.5),(d9,0.8)]. r=3 ile erken durdurma yapılırsa hangi belgeler değerlendirilir? Bu ne tür bir hata riski yaratır?</p>
+      <hr style="margin:16px 0;border-color:#eee">
+      <p><strong>r=3 ile erken durdurma:</strong> Yalnızca ilk 3 belge değerlendirilir: <strong>d3, d1, d7</strong>. d2 ve d9 atlanır.</p>
+      <p><strong>Hata riski:</strong> "science" terimi için d2 çok yüksek tf·idf'e sahip olabilir. "data"da düşük skor almasına rağmen "science"da yüksek skor alan d2, iki terim birlikte düşünüldüğünde top-k'da yer alması gerekirken atlanmış olur.</p>
+      <div class="warning-box"><strong>Bu approximate retrieval'dır.</strong> Tam (exact) top-k garantisi yoktur. Kabul edilebilir kayıp: pratik sistemlerde %5 altında miss oranı hedeflenir.</div>
+      <div class="success-box"><strong>WAND avantajı:</strong> Upper bound kontrolü sayesinde d2 ve d9'un üst sınırı mevcut threshold'dan düşükse atlanır ama threshold yüksekse değerlendirilir → dinamik erken durdurma.</div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /classic -->
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+const questions = [
+  {
+    q: "Champion list (fancy list) nedir?",
+    opts: ["Sorgu işleme sırasında dinamik olarak oluşturulan belge listesi","Her terim için en yüksek tf değerine sahip r belgenin index zamanında hazırlanan listesi","Belgeleri g(d) skoruna göre sıralayan genel bir ranking listesi","Tüm koleksiyonun alfabetik sırayla listelenmesi"],
+    ans: 1,
+    exp: "Champion list: her terim t için index oluşturma sırasında tf(t,d) değeri en yüksek r belgenin listesidir. Sorgu anında bu liste kullanılarak yalnızca bu r belge skorlanır — tam postings yerine."
+  },
+  {
+    q: "Champion list boyutu r için doğru olan hangisidir?",
+    opts: ["r = k olmalıdır (tam top-k için)","r &lt; k olabilir, bu daha verimlidir","r &gt; k olmalıdır, aksi halde top-k bulunamayabilir","r, koleksiyon boyutuyla orantılı olmalıdır"],
+    ans: 2,
+    exp: "r > k zorunludur. Birden fazla sorgu terimi olduğunda champion listeler örtüşür; birleşimleri k'dan az belge içerebilir. Bu yüzden r tipik olarak k'nın çok üzerinde (100–1000) seçilir."
+  },
+  {
+    q: "Statik kalite skoru g(d) ne işe yarar?",
+    opts: ["Sorgu ile belge arasındaki cosine benzerliğini hesaplar","Belgenin sorgudan bağımsız genel kalitesini ölçer (PageRank gibi)","Belgedeki terim frekansını normalize eder","Postings listesinin uzunluğunu sınırlar"],
+    ans: 1,
+    exp: "g(d) sorgudan bağımsız bir kalite ölçütüdür — PageRank, inbound link sayısı, editöryal kalite skoru gibi. net-score(q,d) = g(d) + cosine(q,d) formülüyle cosine'e eklenir."
+  },
+  {
+    q: "Tiered (kademeli) index stratejisinde sorgu nasıl işlenir?",
+    opts: ["Tüm tier'lar eş zamanlı taranır ve sonuçlar birleştirilir","Önce Tier 1 taranır; yeterli sonuç yoksa Tier 2'ye geçilir","Sorgu karmaşıklığına göre hangi tier'ın kullanılacağı seçilir","Her tier farklı bir sunucuda tutulur ve paralel işlenir"],
+    ans: 1,
+    exp: "Tier 1 önce taranır (en yüksek kaliteli belgeler). k sonuç bulunamazsa Tier 2, hâlâ bulunamazsa Tier 3 (tam postings) taranır. Bu sıralı fallback stratejisi hem hız hem kalite sağlar."
+  },
+  {
+    q: "Impact-ordered postings'de postings listeleri neye göre sıralanır?",
+    opts: ["Belge ID'sine göre artan sıra","Belge ID'sine göre azalan sıra","tf·idf (ya da tf) değerine göre azalan sıra","Belge uzunluğuna göre artan sıra"],
+    ans: 2,
+    exp: "Impact-ordered postings: her postings listesi tf·idf değerine göre azalan sırada saklanır. Böylece listenin başında en çok katkı yapan belgeler yer alır ve erken durdurma mümkün olur."
+  },
+  {
+    q: "Cluster pruning'de √N değerinin önemi nedir?",
+    opts: ["Küme sayısını belirler","Koleksiyondan seçilecek lider (leader) belge sayısıdır","Her kümedeki maksimum belge sayısıdır","Sorgu sırasında kaç kümenin taranacağını belirler"],
+    ans: 1,
+    exp: "√N rastgele lider seçilir. N=1.000.000 için √N=1000 lider. Her küme yaklaşık √N=1000 belge içerir. Sorgu, en yakın b liderine atanır ve o liderin kümesi taranır → O(√N) arama."
+  },
+  {
+    q: "DAAT (Document-At-A-Time) yönteminin en büyük avantajı nedir?",
+    opts: ["Tüm postings listelerini bellekte tutar","Düşük bellek kullanımı — her terim için yalnızca bir gösterici","Her terim sırayla işlendiğinden implementasyonu basittir","Tam top-k garantisi verir"],
+    ans: 1,
+    exp: "DAAT'ta tüm terimler için postings listeleri eş zamanlı ilerler. Bellek gereksinimi O(|q|) — sadece her terim için bir gösterici. TAAT ise O(N) akkümülatör vektörü gerektirir."
+  },
+  {
+    q: "TAAT (Term-At-A-Time) akkümülatör vektörü ne saklar?",
+    opts: ["Her sorgu terimi için toplam skor","Her belge için o ana kadar hesaplanan kümülatif skor","Her terimin idf değeri","Her kümenin lider belgesinin skoru"],
+    ans: 1,
+    exp: "TAAT'ta A[d] akkümülatörü her belge için birikimli skoru tutar. Her terim işlendiğinde o terimin katkısı ilgili belgelerin akkümülatörlerine eklenir. Son adımda A vektöründen top-k seçilir."
+  },
+  {
+    q: "WAND algoritması klasik impact ordering'den nasıl farklıdır?",
+    opts: ["WAND yaklaşık sonuç üretirken impact ordering tam top-k verir","WAND tam top-k garantisi verir; upper bound kontrolü ile gereksiz belgeler atlanır","WAND yalnızca idf tabanlı çalışır","WAND TAAT tabanlıdır, DAAT'ta kullanılamaz"],
+    ans: 1,
+    exp: "WAND (Weak AND) her belge için upper bound hesaplayarak threshold altındaki belgeleri atlar ama bu kontrol kesindir → tam top-k garantisi. Basit erken durdurma ise yaklaşık sonuç üretir."
+  },
+  {
+    q: "Inexact top-k retrieval yöntemlerinin ortak dezavantajı nedir?",
+    opts: ["Her zaman çok yavaş çalışırlar","Gerçek top-k belgelerini kaçırabilirler — tam garanti yoktur","Yalnızca küçük koleksiyonlarda çalışırlar","Impact ordering ile uyumsuzdurlar"],
+    ans: 1,
+    exp: "Champion list, tiered index, impact ordering (erken durdurma), cluster pruning — hepsi yaklaşık yöntemlerdir. Gerçek top-k belgeleri bu aday kümesinde olmayabilir. WAND bu kuralın istisnasıdır."
+  },
+  {
+    q: "b=2 ile cluster pruning'de b=1'e göre ne değişir?",
+    opts: ["Lider sayısı 2 kat artar","İki en yakın liderin kümeleri taranır → daha iyi recall, biraz yavaş","Yalnızca iki terimli sorgular desteklenir","Küme sayısı yarıya düşer"],
+    ans: 1,
+    exp: "b=2: sorguya en yakın 2 lider bulunur ve bu 2 liderin kümeleri taranır. b=1'den daha fazla belge değerlendirilir → daha yüksek recall. Dezavantaj: tarama maliyeti b kat artar."
+  },
+  {
+    q: "Web arama motorlarında g(d) skoru olarak ne kullanılır?",
+    opts: ["Cosine similarity","PageRank (link analizi tabanlı otorite skoru)","Belgedeki toplam terim sayısı","Belgenin index'e eklenme tarihi"],
+    ans: 1,
+    exp: "PageRank, bir sayfaya gelen bağlantıların kalitesini ve sayısını ölçer — sorgudan bağımsız bir otorite (authority) skoru. Web arama motorlarında g(d)=PageRank olarak kullanılır."
+  },
+  {
+    q: "High-idf sorgu terimi ile low-idf terimi champion list açısından nasıl farklıdır?",
+    opts: ["İkisi için aynı champion list boyutu kullanılır","Düşük idf'li terimler (yaygın kelimeler) için champion list daha küçük tutulur","Yüksek idf'li terimler daha küçük postings listesi → champion list de daha küçük","Low-idf terimler champion list'ten tamamen hariç tutulur"],
+    ans: 2,
+    exp: "Yüksek idf'li terimler (nadir, ayırt edici) küçük postings listesine sahiptir; champion list de küçük olabilir. Düşük idf'li yaygın terimler için büyük postings listesi vardır ama champion list yine r ile sınırlıdır."
+  },
+  {
+    q: "Impact ordering'de erken durdurma ile 'idf eşiği' ne anlama gelir?",
+    opts: ["Yalnızca idf'si belirli bir eşiğin üzerindeki terimler index'e eklenir","Çok düşük idf'li (çok yaygın) terimlerin postings listelerini kısmi tarayıp erken bitir","idf değeri hesaplandıktan sonra postings listesi silinir","Her terimin taranacağı maksimum idf değeri belirlenir"],
+    ans: 1,
+    exp: "İdf eşiği stratejisi: 'the', 'is' gibi çok yaygın terimlerin (düşük idf) postings listelerini tamamen taramak yerine kısmen tara ve erken bitir. Bu terimler ayrım yapmaz — erken durdurma kaliteyi çok etkilemez."
+  },
+  {
+    q: "Cluster pruning'in zaman karmaşıklığı nedir (N belge, b=1)?",
+    opts: ["O(N)","O(N log N)","O(√N)","O(N²)"],
+    ans: 2,
+    exp: "Lider sayısı √N. Sorgu için: (1) √N lider arasından en yakını bul → O(√N), (2) bu liderin kümesini tara → O(√N). Toplam: O(√N). N=1M için 1000 karşılaştırma — tam taramanın 1000'de biri."
+  }
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  const c = document.getElementById('quizContainer');
+  c.innerHTML = '';
+  score = 0; answered = 0;
+  updateScore();
+  questions.forEach((q, qi) => {
+    const opts = q.opts.map((o, oi) =>
+      `<button class="option" id="opt_${qi}_${oi}" onclick="answer(${qi},${oi})">
+        <span style="font-weight:700;min-width:18px">${['A','B','C','D'][oi]})</span>
+        <span>${o}</span>
+      </button>`
+    ).join('');
+    c.innerHTML += `
+      <div class="q-card" id="qcard_${qi}">
+        <div class="q-num">Soru ${qi+1} / 15</div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="explanation" id="exp_${qi}"><strong>Açıklama:</strong> ${q.exp}</div>
+      </div>`;
+  });
+}
+
+function answer(qi, oi) {
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[id^="opt_${qi}_"]`);
+  opts.forEach(o => o.disabled = true);
+  const selected = document.getElementById(`opt_${qi}_${oi}`);
+  const correct = document.getElementById(`opt_${qi}_${q.ans}`);
+  if (oi === q.ans) { selected.classList.add('correct'); score++; }
+  else { selected.classList.add('wrong'); correct.classList.add('correct'); }
+  answered++;
+  document.getElementById(`exp_${qi}`).classList.add('show');
+  updateScore();
+}
+
+function updateScore() {
+  const pct = questions.length ? (score / questions.length) * 100 : 0;
+  document.getElementById('scoreBar').style.width = pct + '%';
+  document.getElementById('scoreVal').textContent = `${score} / ${questions.length}`;
+}
+
+function resetQuiz() { buildQuiz(); }
+buildQuiz();
+</script>
+</body>
+</html>

@@ -14,6 +14,11 @@ Interactive course notes and quiz system. All content is in English.
 | 4 | Index Construction | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch4.html) |
 | 5 | Index Compression | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch5.html) |
 | 6 | Scoring, TF-IDF & VSM | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch6.html) |
+| 7 | Efficient Scoring & IR Components | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch7.html) |
+| 8 | IR Evaluation | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch8.html) |
+| 9 | Relevance Feedback & Query Expansion | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch9.html) |
+| 10 | Probabilistic IR | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch10.html) |
+| 11 | Text Classification, Naive Bayes & LSI | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch11.html) |
 
 ## Topics Covered
 
@@ -34,3 +39,18 @@ Heaps' law (vocabulary growth), Zipf's law (term frequency distribution), lossle
 
 **Chapter 6 — Scoring, TF-IDF & Vector Space Model**
 Parametric and zone indexes, weighted zone scoring, machine-learned relevance weights, tf-idf weighting, vector space model, cosine similarity, COSINESCORE algorithm, SMART notation, sublinear tf, pivoted document length normalization.
+
+**Chapter 7 — Efficient Scoring & IR System Components**
+Champion lists, static quality scores g(d), tiered indexes, impact-ordered postings, early termination, WAND algorithm, cluster pruning (√N leaders), DAAT vs TAAT, query-independent evidence, safe vs unsafe ranking.
+
+**Chapter 8 — IR Evaluation**
+Precision, Recall, F-measure (β parameter), contingency table, MAP (Mean Average Precision), P@k, R-Precision, break-even point, ROC curve, AUC, Kappa statistic (inter-rater agreement), relevance pooling, A/B testing, static vs dynamic snippets.
+
+**Chapter 9 — Relevance Feedback & Query Expansion**
+Relevance feedback process, Rocchio algorithm (q_m = α·q₀ + β·centroid(D_r) − γ·centroid(D_nr)), pseudo relevance feedback, query drift, global analysis methods, thesaurus (manual/automatic), WordNet, MeSH, query log mining, synonymy vs polysemy.
+
+**Chapter 10 — Probabilistic IR**
+Bayes theorem, Probability Ranking Principle (PRP), Binary Independence Model (BIM), p_t/u_t definitions, RSV scoring, Laplace smoothing (p_t=(r_t+0.5)/(r+1)), RSV≈IDF connection, BM25 (k₁ and b parameters), RSJ weights.
+
+**Chapter 11 — Text Classification, Naive Bayes & LSI**
+Text classification (γ: X → C), supervised learning, Multinomial Naive Bayes, Bernoulli NB, Laplace smoothing for P(t|c), kNN classifier, Rocchio centroid classifier, LSI/SVD (A = UΣVᵀ, rank-k approximation), macro vs micro averaging, feature selection.
