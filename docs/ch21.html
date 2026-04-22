@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE 422 — Ch21: Link Analysis</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;line-height:1.7}
+a{color:#1a3a6e}
+.topbar{background:#1a3a6e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.topbar a{color:#fff;text-decoration:none;font-size:.9rem;opacity:.8}
+.topbar a:hover{opacity:1}
+.topbar h1{font-size:1rem;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;position:sticky;top:0;z-index:10}
+.tab-btn{padding:14px 28px;font-size:.95rem;font-weight:600;cursor:pointer;border:none;background:none;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:#1a3a6e;border-bottom-color:#1a3a6e}
+.tab-btn:hover{color:#1a3a6e}
+.section{display:none;padding:0}.section.active{display:block}
+.container{max-width:860px;margin:0 auto;padding:36px 20px}
+
+.card{background:#fff;border-radius:10px;border:1px solid #e0e0da;padding:24px 28px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;color:#1a3a6e;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.card h3{font-size:1rem;font-weight:700;color:#1a3a6e;margin:18px 0 8px}
+.card-teal h2{color:#085041}
+.card-amber h2{color:#92400e}
+.card-red h2{color:#b91c1c}
+.card-purple h2{color:#3C3489}
+
+.info-box{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.success-box{background:#f0fdf4;border-left:4px solid #22c55e;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.warning-box{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.danger-box{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:14px 18px;margin:14px 0;font-size:.93rem}
+.info-box strong,.success-box strong,.warning-box strong,.danger-box strong{display:block;margin-bottom:4px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.g-card{background:#f8f8f4;border:1px solid #e8e8e0;border-radius:8px;padding:16px}
+.g-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#1a3a6e}
+
+pre{background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:14px 0}
+code{font-family:'Fira Code','Courier New',monospace}
+.inline-code{background:#f0f0eb;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.88em;color:#b91c1c}
+
+.math{background:#f8f8f4;border:1px solid #e0e0da;border-radius:8px;padding:14px 20px;margin:14px 0;font-family:'Courier New',monospace;font-size:.93rem;text-align:center;color:#1a3a6e;font-weight:600}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+th{background:#1a3a6e;color:#fff;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-bottom:1px solid #e8e8e0}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#f8f8f4}
+
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0}
+.flow-box{background:#1a3a6e;color:#fff;padding:10px 16px;border-radius:6px;font-size:.85rem;font-weight:600;text-align:center;flex:1;min-width:100px}
+.flow-arrow{color:#1a3a6e;font-size:1.4rem;font-weight:700;padding:0 6px;flex-shrink:0}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#b91c1c}
+
+ul,ol{padding-left:1.4em;margin:8px 0}
+li{margin-bottom:4px}
+p{margin-bottom:10px}
+
+.score-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e0e0da;border-radius:8px;padding:14px 18px;margin-bottom:24px}
+.score-label{font-size:.85rem;font-weight:600;color:#555;white-space:nowrap}
+.score-track{flex:1;height:10px;background:#e8e8e0;border-radius:5px;overflow:hidden}
+.score-fill{height:100%;background:#1a3a6e;border-radius:5px;transition:width .4s}
+.score-val{font-size:.9rem;font-weight:700;color:#1a3a6e;white-space:nowrap}
+.q-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;padding:22px 26px;margin-bottom:18px}
+.q-num{font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.q-text{font-size:.97rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+.options{display:grid;gap:8px}
+.option{padding:11px 16px;border-radius:7px;border:2px solid #e0e0da;cursor:pointer;font-size:.9rem;transition:all .15s;text-align:left;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.option:hover:not(:disabled){background:#f0f4ff;border-color:#1a3a6e}
+.option.correct{background:#d1fae5;border-color:#22c55e;color:#065f46}
+.option.wrong{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+.option:disabled{cursor:default}
+.explanation{display:none;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:.88rem}
+.explanation.show{display:block}
+.reset-btn{display:block;margin:8px auto 0;padding:10px 28px;background:#1a3a6e;color:#fff;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+.reset-btn:hover{background:#0f2448}
+
+.classic-card{background:#fff;border:1px solid #e0e0da;border-radius:10px;margin-bottom:18px;overflow:hidden}
+.classic-header{padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem;user-select:none}
+.classic-header:hover{background:#f8f8f4}
+.classic-chevron{color:#888;font-size:1.1rem;transition:transform .25s}
+.classic-body{display:none;padding:18px 22px;border-top:1px solid #eee;font-size:.92rem;line-height:1.7}
+.classic-body.open{display:block}
+
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .flow{flex-direction:column;align-items:stretch}
+  .flow-arrow{transform:rotate(90deg);text-align:center}
+  .tab-btn{padding:12px 16px;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html">← Ana Sayfa</a>
+  <h1>Chapter 21: Link Analysis</h1>
+  <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 20 MC</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+</div>
+
+<!-- ==================== LESSON ==================== -->
+<div id="lesson" class="section active">
+<div class="container">
+
+  <!-- Giriş -->
+  <div class="card">
+    <h2>Bölüm 21 — Link Analizi: Genel Bakış</h2>
+    <p>Web'in grafik yapısı ve hiperlinkler, web arama motorlarının sıralama hesaplamalarında kritik bir rol oynar. Bu bölümde;</p>
+    <ul>
+      <li><strong>Web'in bir graf olarak modellenmesi</strong> ve anchor text'in önemi</li>
+      <li><strong>PageRank</strong>: rastgele sörf modeline dayalı sorgudan bağımsız sıralama</li>
+      <li><strong>HITS</strong>: Hubs &amp; Authorities, sorguya duyarlı link analizi</li>
+    </ul>
+    <div class="info-box">
+      <strong>Temel Sezgi</strong>
+      Bir sayfaya link veren sayfalar, o sayfanın kalitesini "onaylamış" sayılır — tıpkı akademik atıf analizindeki gibi. Link analizi, bu onay zincirini matematiksel olarak modeller.
+    </div>
+    <div class="flow">
+      <div class="flow-box">Web Grafı</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Markov Zinciri</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Durağan Dağılım</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">PageRank / HITS</div>
+    </div>
+  </div>
+
+  <!-- 21.1 Web as a Graph -->
+  <div class="card">
+    <h2>21.1 Web'i Bir Graf Olarak Görmek</h2>
+    <p>Web grafı, her web sayfasının bir <strong>düğüm (node)</strong>, her hiperlinkın ise yönlü bir <strong>kenar (edge)</strong> olduğu devasa bir yönlü graftır.</p>
+
+    <h3>İki Temel Sezgi</h3>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>1. Anchor Text</h4>
+        B sayfasına işaret eden linkin anchor text'i, B sayfasının iyi bir açıklamasıdır. Kullanıcılar bir sayfayı "kendi dillerinde" tarif ederken anchor text oluşturur.
+      </div>
+      <div class="g-card">
+        <h4>2. Link = Onay</h4>
+        A sayfasından B'ye verilen link, A'nın B'yi "onayladığı" anlamına gelir. (İç linkler — ortak template'den gelen — bu değerlendirmenin dışında tutulur.)
+      </div>
+    </div>
+
+    <h3>21.1.1 Anchor Text ve Web Grafı</h3>
+    <p>Klasik örnek: IBM'in ana sayfasında <em>computer</em> kelimesi geçmiyordu, Yahoo'nun sayfasında <em>portal</em> geçmiyordu. Oysa bu sayfalara gelen linklerin anchor text'leri bu kelimeleri içeriyordu. Sonuç olarak:</p>
+    <div class="success-box">
+      <strong>Anchor Text Gücü</strong>
+      Anchor text, hedef sayfayı <em>hedef sayfanın kendisinden daha iyi</em> tanımlayabilir. Arama motorları, anchor text'i bağlı olduğu sayfanın indeksleme terimi olarak kullanır.
+    </div>
+    <div class="warning-box">
+      <strong>Link Spam Riski</strong>
+      "Big Blue" → IBM veya "evil empire" gibi derogatory anchor text örnekleri, arama motorlarını manipüle etmek için kasıtlı olarak oluşturulan yanıltıcı anchor text'e yol açabilir (Google bombing). Bu bir spam türüdür.
+    </div>
+    <p><strong>Extended anchor text</strong>: Linkin çevresindeki metin penceresi de anchor text kadar faydalı bilgi içerebilir.</p>
+  </div>
+
+  <!-- 21.2 PageRank -->
+  <div class="card card-teal">
+    <h2>21.2 PageRank</h2>
+    <p>PageRank, her web sayfasına <strong>0 ile 1 arasında</strong> bir sayısal skor atar. Bu skor, sayfanın link yapısına göre belirlenen <em>statik kalite ölçüsüdür</em> — sorgudan bağımsızdır.</p>
+
+    <h3>Rastgele Sörf Modeli (Random Surfer)</h3>
+    <p>Bir web sayfasında başlayan rastgele bir gezgin, her adımda bulunduğu sayfanın outlink'lerinden birini eşit olasılıkla seçer ve tıklar. Şekil 21.1'deki gibi: A düğümünden çıkan 3 link varsa (B, C, D), her birine 1/3 olasılıkla geçilir.</p>
+
+    <div class="info-box">
+      <strong>Teleport Operasyonu</strong>
+      Çıkan linki olmayan (dangling node) bir sayfada ne olur? Veya gezgin sıkışırsa? Çözüm: <strong>teleport</strong>. Gezgin, her adımda α olasılıkla herhangi bir sayfaya ışınlanır (tüm N sayfadan biri, eşit 1/N olasılıkla). Tipik α = 0.1.
+    </div>
+
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Outlink varken</h4>
+        (1 − α) olasılıkla rastgele bir outlink'e git<br>
+        α olasılıkla herhangi bir sayfaya teleport et
+      </div>
+      <div class="g-card">
+        <h4>Outlink yokken</h4>
+        Her zaman teleport et<br>
+        (tüm web sayfalarından birine eşit olasılıkla)
+      </div>
+    </div>
+
+    <h3>21.2.1 Markov Zincirleri</h3>
+    <p>Rastgele sörf modeli bir <strong>Markov zinciri</strong> olarak formüle edilir: her web sayfası bir durum, geçiş olasılıkları da sayfalar arası link yapısına göre belirlenir.</p>
+
+    <div class="math">∀i, j, P_ij ∈ [0,1]    ve    ∀i, Σⱼ P_ij = 1</div>
+
+    <p>Geçiş olasılık matrisi P şöyle elde edilir:</p>
+    <ol>
+      <li>A matrisinde (adjacency) hiç 1 içermeyen satırlar varsa tüm elemanları 1/N yap.</li>
+      <li>Her satırdaki 1'leri, o satırdaki 1 sayısına böl (eşit outlink dağılımı).</li>
+      <li>Elde edilen matrisi (1 − α) ile çarp.</li>
+      <li>Her elemanına α/N ekle → bu P matrisidir.</li>
+    </ol>
+
+    <div class="success-box">
+      <strong>Stokastik Matris</strong>
+      P matrisi bir stokastik matristir: tüm elemanları [0,1] aralığında ve her satır toplamı 1'dir. En büyük özdeğerine karşılık gelen <em>principal left eigenvector</em>'ü vardır; bu özdeğer 1'dir.
+    </div>
+
+    <h3>Ergodik Markov Zinciri</h3>
+    <p>Bir Markov zinciri <strong>ergodikse</strong>, herhangi iki durum arasında pozitif geçiş olasılığı zinciri çalıştırmaya devam ettiğinde sonunda pozitif olur. Bunun için:</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>İndirgenemezlik (Irreducibility)</h4>
+        Her durumdan her duruma sıfır olmayan olasılıkla ulaşılabilir.
+      </div>
+      <div class="g-card">
+        <h4>Aperiodiklik (Aperiodicity)</h4>
+        Durumlar periyodik kümeler halinde bölünmez; geçişler belirli döngüsel paternler izlemez.
+      </div>
+    </div>
+    <div class="info-box">
+      <strong>Theorem 21.1 (Steady-State)</strong>
+      Her ergodik Markov zinciri için, η(i,t) = t adımda durum i'ye toplam ziyaret sayısı olmak üzere:<br>
+      <strong>lim (t→∞) η(i,t)/t = π(i)</strong><br>
+      Bu π(i) değeri, durum i'nin durağan-hal (steady-state) olasılığıdır ve sayfanın PageRank'idir.
+    </div>
+
+    <h3>21.2.2 PageRank Hesabı: Power Iteration</h3>
+    <p>PageRank değerleri P matrisinin <strong>principal left eigenvector</strong>'ü olarak bulunur:</p>
+    <div class="math">π̃ · P = 1 · π̃</div>
+    <p><strong>Power Iteration yöntemi:</strong></p>
+    <ol>
+      <li>x̃₀ ile başla (örn. (1, 0, 0, ...) — surfer ilk sayfada başlıyor)</li>
+      <li>x̃₁ = x̃₀ · P</li>
+      <li>x̃₂ = x̃₁ · P = x̃₀ · P²</li>
+      <li>... t büyüdükçe x̃ₜ durağan dağılıma yaklaşır</li>
+      <li>Ardışık iterasyonlar arasındaki değişim eşiğin altına inince dur</li>
+    </ol>
+    <div class="warning-box">
+      <strong>PageRank Sorgudan Bağımsızdır</strong>
+      PageRank değerleri önceden hesaplanır ve sorgu zamanında yalnızca bir faktör olarak kullanılır. Sayfaların göreli sıralaması sorguya göre değişebileceğinden PageRank tek başına sıralama için yetmez — cosine similarity ve diğer faktörlerle birleştirilir.
+    </div>
+
+    <h3>21.2.3 Konuya Özgü PageRank (Topic-Specific)</h3>
+    <p>Standart PageRank'te teleport tüm web'e eşit dağılır. <strong>Topic-Specific PageRank</strong>'te ise teleport yalnızca belirli bir konudaki (örn. spor) sayfa kümesi S'e yapılır.</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Spor PageRank (π̃ₛ)</h4>
+        Teleport sadece spor sayfalarına. Spor sayfaları daha yüksek skor alır.
+      </div>
+      <div class="g-card">
+        <h4>Siyaset PageRank (π̃ₚ)</h4>
+        Teleport sadece siyaset sayfalarına. Siyaset sayfaları öne çıkar.
+      </div>
+    </div>
+    <p><strong>Kişiselleştirilmiş PageRank:</strong> Kullanıcı %60 spor, %40 siyaset ilgiliyse:</p>
+    <div class="math">Personalized PageRank = 0.6 · π̃ₛ + 0.4 · π̃ₚ</div>
+    <div class="success-box">
+      <strong>Verimlilik</strong>
+      Her kullanıcı profili için ayrı matris hesaplamak gerekmez. Konu bazlı PageRank vektörlerinin doğrusal kombinasyonu yeterlidir — bu Markov zincirlerinin doğrusal yapısından kaynaklanır.
+    </div>
+  </div>
+
+  <!-- 21.3 HITS -->
+  <div class="card card-amber">
+    <h2>21.3 Hubs ve Authorities (HITS)</h2>
+    <p>HITS (Hyperlink-Induced Topic Search), PageRank'ten farklı olarak <strong>sorgya duyarlı</strong> bir link analizi yöntemidir. Her sayfaya iki ayrı skor verilir:</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Hub Skoru h(v)</h4>
+        İyi hub'lar, birçok iyi authority'ye link verir. "Yol gösterici" sayfalar — elle derlenmiş kaynak listeleri gibi.
+      </div>
+      <div class="g-card">
+        <h4>Authority Skoru a(v)</h4>
+        İyi authority'ler, birçok iyi hub tarafından gösterilir. "Uzman" sayfalar — bir konunun birincil kaynakları.
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Döngüsel Tanım — Iteratif Çözüm</strong>
+      İyi hub'lar → iyi authority'lere işaret eder<br>
+      İyi authority'ler → iyi hub'lar tarafından gösterilir<br>
+      Bu döngüsel tanım iteratif hesapla çözülür.
+    </div>
+
+    <h3>Iteratif Güncelleme Kuralları</h3>
+    <div class="math">h(v) ← Σ a(y)  [v → y olan tüm y için]<br>a(v) ← Σ h(y)  [y → v olan tüm y için]</div>
+    <p>Matris formunda (A = adjacency matrisi):</p>
+    <div class="math">h⃗ ← A · a⃗<br>a⃗ ← Aᵀ · h⃗</div>
+    <p>Birleştirilince:</p>
+    <div class="math">h⃗ ← AAᵀ · h⃗<br>a⃗ ← AᵀA · a⃗</div>
+    <div class="success-box">
+      <strong>Özdeğer Bağlantısı</strong>
+      Bu denklemler AAᵀ ve AᵀA matrislerinin eigenvector denklemlerine benzer. Hub ve authority vektörleri sırasıyla AAᵀ ve AᵀA'nın principal eigenvector'leridir.
+    </div>
+
+    <h3>HITS Algoritması — Özet</h3>
+    <ol>
+      <li>Hedef web sayfaları alt kümesini topla (<strong>base set</strong>)</li>
+      <li>Bu alt küme üzerindeki grafı oluştur, AAᵀ ve AᵀA matrislerini hesapla</li>
+      <li>Principal eigenvector'leri bul → hub ve authority skorları</li>
+      <li>En yüksek skorlu hub'ları ve authority'leri döndür</li>
+    </ol>
+
+    <h3>21.3.1 Web Alt Kümesinin Seçimi</h3>
+    <p>Neden direkt text query sayfaları kullanmıyoruz? Çünkü iyi authority sayfalar sorgu terimini içermeyebilir (örn. IBM sitesinde "computer" kelimesi yok ama IBM bir bilgisayar firmasıdır).</p>
+    <div class="grid2">
+      <div class="g-card">
+        <h4>Root Set</h4>
+        Text query ile eşleşen ~200 sayfa. Bunlar base set'in çekirdeğini oluşturur.
+      </div>
+      <div class="g-card">
+        <h4>Base Set</h4>
+        Root set + root set'e link veren sayfalar + root set'in link verdiği sayfalar. Hem hub'lar hem authority'ler buraya dahil olur.
+      </div>
+    </div>
+    <div class="warning-box">
+      <strong>Çok Dilli Yan Etki</strong>
+      HITS çalıştırıldığında, base set büyümesi sayesinde sorgu dili dışındaki sayfalar da öne çıkabilir. Örn. İngilizce "japan elementary schools" sorgusu Japonca sayfaları authority olarak buldu — saf link yapısından kaynaklanır, çeviri yoktur.
+    </div>
+  </div>
+
+  <!-- PageRank vs HITS -->
+  <div class="card card-purple">
+    <h2>PageRank vs. HITS — Karşılaştırma</h2>
+    <table>
+      <tr>
+        <th>Özellik</th>
+        <th>PageRank</th>
+        <th>HITS</th>
+      </tr>
+      <tr>
+        <td>Sorgu bağımsızlığı</td>
+        <td>Evet (önceden hesaplanır)</td>
+        <td>Hayır (sorgu zamanında hesaplanır)</td>
+      </tr>
+      <tr>
+        <td>Skor sayısı</td>
+        <td>1 skor (PR)</td>
+        <td>2 skor (hub + authority)</td>
+      </tr>
+      <tr>
+        <td>Algoritma temeli</td>
+        <td>Markov zinciri / rastgele sörf</td>
+        <td>Eigenvector (AAᵀ, AᵀA)</td>
+      </tr>
+      <tr>
+        <td>Web kapsamı</td>
+        <td>Tüm web</td>
+        <td>Sorgu etrafındaki alt küme</td>
+      </tr>
+      <tr>
+        <td>Spam direnci</td>
+        <td>Teleport ile kısmen korunur</td>
+        <td>Topic drift riski var</td>
+      </tr>
+      <tr>
+        <td>Kullanım</td>
+        <td>Genel web sıralaması</td>
+        <td>Broad-topic aramalar</td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ==================== QUIZ ==================== -->
+<div id="quiz" class="section">
+<div class="container">
+  <div class="score-row">
+    <span class="score-label">Puan</span>
+    <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+    <span class="score-val"><span id="scoreVal">0</span> / 20</span>
+  </div>
+  <div id="quizContainer"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Çöz</button>
+</div>
+</div>
+
+<!-- ==================== CLASSIC ==================== -->
+<div id="classic" class="section">
+<div class="container">
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 1 — PageRank Power Iteration Hesabı</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Şekil 21.2'deki 3 düğümlü Markov zinciri için (A→B 0.5, A→C 0.5; B→A 1; C→A 1) geçiş olasılık matrisi nedir ve α = 0.5 teleport oranıyla durağan dağılımı bulunuz.</p>
+      <p><strong>Cevap:</strong></p>
+      <p>Geçiş matrisi (teleport öncesi):</p>
+      <pre><code>P_raw = | 0    0.5  0.5 |
+        | 1    0    0   |
+        | 1    0    0   |</code></pre>
+      <p>α = 0.5 ile teleport eklenince: P = (1−0.5)·P_raw + (0.5/3)·J (J: tüm elemanları 1 olan matris)</p>
+      <pre><code>P = | 1/6   2/3   1/6 |
+    | 5/12  1/6   5/12|
+    | 1/6   2/3   1/6 |</code></pre>
+      <p>Simetri gözlemiyle: durum 1 ve 3 aynı steady-state olasılığına sahip (p). Durum 2 için 1−2p. π̃ = π̃·P denklemini çözeriz: p = 5/18, dolayısıyla <strong>π̃ = (5/18, 4/9, 5/18)</strong>.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 2 — HITS Hub ve Authority Güncellemesi</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Tüm hub ve authority skorları 1 ile başlatılırsa, bir iterasyon sonrası in-degree 3 olan bir düğümün authority skoru ne olur? out-degree 2 olan bir düğümün hub skoru ne olur?</p>
+      <p><strong>Cevap:</strong></p>
+      <p>Authority güncelleme kuralı: <strong>a(v) ← Σ h(y)</strong> (y → v olan tüm y'ler için)</p>
+      <p>Başlangıçta tüm h(y) = 1 olduğundan, in-degree 3 olan v için: <strong>a(v) = 1 + 1 + 1 = 3</strong></p>
+      <p>Hub güncelleme kuralı: <strong>h(v) ← Σ a(y)</strong> (v → y olan tüm y'ler için)</p>
+      <p>Başlangıçta tüm a(y) = 1 olduğundan, out-degree 2 olan v için: <strong>h(v) = 1 + 1 = 2</strong></p>
+      <p>Genel kural: ilk iterasyonda a(v) = in-degree(v), h(v) = out-degree(v).</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 3 — Ergodik Markov Zinciri Koşulları</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Üç durumlu bir Markov zinciri düşünün: A'dan B'ye olasılık 1; B'den A'ya pA, C'ye (1−pA); C'den A'ya olasılık 1. Hangi pA ∈ [0,1] değerleri için zincir ergodiktir?</p>
+      <p><strong>Cevap:</strong></p>
+      <p><strong>İndirgenemezlik:</strong> A→B→C→A yolu mevcutsa tüm durumlar birbirine erişilebilir olur. B'den C'ye gidebilmek için (1−pA) &gt; 0, yani pA &lt; 1 olmalı.</p>
+      <p><strong>Aperiodiklik:</strong> A→B→A döngüsü periyod 2 oluşturabilir. Ancak B'den C'ye de gidilebiliyorsa (pA &lt; 1) ve C'den A'ya gidiliyorsa, farklı uzunluklarda döngüler mevcut olur ve aperiodiklik sağlanır.</p>
+      <p>pA = 1 ise B'den C'ye hiç gidilemez, C durumu erişilemez → indirgenemez değil.</p>
+      <p>Sonuç: Zincir <strong>0 ≤ pA &lt; 1</strong> için ergodiktir.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 4 — Topic-Specific PageRank ve Kişiselleştirme</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> Neden her kullanıcı profili için ayrı bir PageRank vektörü hesaplamak zorunda değiliz? Konu bazlı vektörler nasıl kullanılır?</p>
+      <p><strong>Cevap:</strong></p>
+      <p>Markov zincirlerinin doğrusal yapısı sayesinde, bir kullanıcının kişiselleştirilmiş PageRank vektörü, konu bazlı PageRank vektörlerinin <strong>doğrusal kombinasyonu</strong> olarak ifade edilebilir.</p>
+      <p>Kullanıcının ilgi profili: q oranı spor, (1−q) oranı siyaset:</p>
+      <pre><code>π̃_kişisel = q · π̃_spor + (1−q) · π̃_siyaset</code></pre>
+      <p>Bu, her konu için bir kez PageRank hesaplamanın yeterli olduğu anlamına gelir. Farklı kullanıcı profilleri için sadece bu önceden hesaplanmış vektörlerin farklı ağırlıklarda birleştirilmesi gerekir — yeni matris hesabı gerekmez.</p>
+    </div>
+  </div>
+
+  <div class="classic-card">
+    <div class="classic-header" onclick="toggleClassic(this)">
+      <span>Soru 5 — HITS ve PageRank Spam Savunması</span>
+      <span class="classic-chevron">▼</span>
+    </div>
+    <div class="classic-body">
+      <p><strong>Soru:</strong> "Link spam" nedir ve PageRank ile HITS bu sorunla nasıl başa çıkar?</p>
+      <p><strong>Cevap:</strong></p>
+      <p><strong>Link Spam:</strong> Bir saldırgan, hedef sayfanın in-link sayısını yapay olarak artırmak için çok sayıda sahte sayfa oluşturur. Amaç, hedef sayfanın kalite skorunu yükseltmektir.</p>
+      <p><strong>PageRank'in savunması:</strong></p>
+      <ul>
+        <li>Teleport operasyonu, zincirin ergodik kalmasını sağlar ve tek bir kaynaktan gelen aşırı link birikimini sınırlar.</li>
+        <li>Yüksek PageRank'li sayfalardan gelen linklerin etkisi çok daha büyük olduğundan, düşük kaliteli spam sayfalarından gelen linklerin katkısı zaten düşüktür.</li>
+        <li>Arama motorları ek sinyallerle (domain trust, link örüntüsü analizi) spam tespiti yapar.</li>
+      </ul>
+      <p><strong>HITS'in zayıflığı:</strong></p>
+      <ul>
+        <li>HITS sorgu zamanında hesaplandığından, base set oluşturma aşamasında spam sayfalar dahil olabilir.</li>
+        <li>"Topic drift": base set ilgisiz konulara kayabilir, manipülasyona daha açıktır.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleClassic(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.classic-chevron');
+  const isOpen = body.classList.toggle('open');
+  chevron.style.transform = isOpen ? 'rotate(180deg)' : '';
+}
+
+const questions = [
+  {
+    q: "PageRank'in temel sezgisi nedir?",
+    opts: [
+      "Daha uzun sayfalara daha yüksek skor verilir",
+      "Daha fazla in-link alan sayfalar önemlidir; önemli sayfalardan gelen linklerin katkısı daha büyüktür",
+      "Sayfa içeriğindeki terim frekansı sıralamayı belirler",
+      "Daha eski domainler daha güvenilirdir"
+    ],
+    ans: 1,
+    exp: "PageRank, link yapısını 'onay' olarak görür. Önemli sayfalardan gelen linklerin etkisi daha büyüktür — tıpkı atıf analizinde prestijli dergilerdeki atıfların daha değerli olması gibi."
+  },
+  {
+    q: "Teleport operasyonu neden gereklidir?",
+    opts: [
+      "Arama hızını artırmak için",
+      "Outlink'i olmayan (dangling node) sayfalar ile döngüsel yapılarda random surfer'ın sıkışmasını önlemek için",
+      "Hub sayfaları bulmak için",
+      "Anchor text ağırlığını hesaplamak için"
+    ],
+    ans: 1,
+    exp: "Dangling node'lar (outlink'i olmayan sayfalar) surfer'ı tıkandırır. Teleport, surfer'ın her adımda α olasılıkla herhangi bir sayfaya ışınlanmasını sağlar; bu Markov zincirini ergodik kılar."
+  },
+  {
+    q: "Markov zincirinin ergodik olması için hangi iki koşul gereklidir?",
+    opts: [
+      "Simetri ve normallik",
+      "İndirgenemezlik ve aperiodiklik",
+      "Stokastiklik ve diyagonallik",
+      "Pozitiflik ve kompaktlık"
+    ],
+    ans: 1,
+    exp: "İndirgenemezlik: her durumdan her duruma ulaşılabilir. Aperiodiklik: durumlar periyodik kümelere bölünmez. Bu iki koşul sağlanınca benzersiz bir steady-state dağılımı vardır."
+  },
+  {
+    q: "Stokastik matrisin en büyük özdeğeri kaçtır?",
+    opts: ["0", "0.5", "1", "N (matris boyutu)"],
+    ans: 2,
+    exp: "Stokastik matrislerin en büyük özdeğeri her zaman 1'dir. Bu, Perron-Frobenius teoreminin bir sonucudur. PageRank, bu özdeğere karşılık gelen principal left eigenvector'den elde edilir."
+  },
+  {
+    q: "Power iteration yönteminde hangi koşul karşılandığında algoritma durdurulur?",
+    opts: [
+      "100 iterasyon tamamlandığında",
+      "Matris köşegen olduğunda",
+      "Ardışık iki iterasyon arasındaki değişim önceden belirlenen bir eşiğin altına indiğinde",
+      "Tüm PageRank değerleri eşit olduğunda"
+    ],
+    ans: 2,
+    exp: "Power iteration, dağılım vektörü yakınsadığında — yani x̃ₜ ile x̃ₜ₊₁ arasındaki fark yeterince küçüldüğünde — durdurulur. Bu frekansların 'oturması' PageRank değerlerine ulaşıldığı anlamına gelir."
+  },
+  {
+    q: "Topic-specific PageRank, standart PageRank'ten nasıl farklılaşır?",
+    opts: [
+      "Daha az iterasyon gerektirir",
+      "Teleport işlemi tüm web'e değil, konuyla ilgili belirli bir sayfa kümesi S'e yapılır",
+      "Outlink yerine in-link sayısını kullanır",
+      "Matrisi transpoz ederek hesaplanır"
+    ],
+    ans: 1,
+    exp: "Topic-specific PageRank'te teleport operasyonu yalnızca önceden belirlenmiş konu sayfaları kümesi S'e yapılır. Bu, o konuyla ilgili sayfaların steady-state olasılığını artırır."
+  },
+  {
+    q: "Bir kullanıcının kişiselleştirilmiş PageRank vektörü nasıl hesaplanır?",
+    opts: [
+      "Her kullanıcı için sıfırdan tam bir PageRank hesabı yapılır",
+      "Konu bazlı PageRank vektörlerinin kullanıcı ilgi oranlarıyla ağırlıklı doğrusal kombinasyonu alınır",
+      "Kullanıcının geçmiş aramalarına bakılarak en çok ziyaret edilen sayfaya PR verilir",
+      "Sadece kullanıcının bookmarkları dikkate alınır"
+    ],
+    ans: 1,
+    exp: "Markov zincirinin doğrusal yapısı sayesinde, kişisel PageRank = Σ(wᵢ · π̃ᵢ) şeklinde hesaplanabilir; burada wᵢ kullanıcının konu i'ye olan ilgi oranıdır. Her konu için sadece bir kez hesaplama yeterlidir."
+  },
+  {
+    q: "HITS algoritmasında 'hub' sayfası nasıl tanımlanır?",
+    opts: [
+      "Çok fazla in-link alan sayfa",
+      "Konuyla ilgili birçok authority sayfasına link veren sayfa",
+      "En yüksek PageRank değerine sahip sayfa",
+      "Kullanıcılar tarafından en çok ziyaret edilen sayfa"
+    ],
+    ans: 1,
+    exp: "Hub'lar, iyi authority'lere yönlendiren sayfalardır — genellikle elle hazırlanmış kaynak listeleri gibi. İyi hub, birçok iyi authority'ye link verir."
+  },
+  {
+    q: "HITS'te authority skoru nasıl güncellenir?",
+    opts: [
+      "a(v) ← Σ a(y) için v→y tüm y'ler",
+      "a(v) ← Σ h(y) için y→v olan tüm y'ler",
+      "a(v) ← h(v) / in-degree(v)",
+      "a(v) ← out-degree(v) × h(v)"
+    ],
+    ans: 1,
+    exp: "Authority skoru, v'ye link veren (y→v) tüm sayfaların hub skorlarının toplamıdır. İyi hub'lar tarafından gösterilen sayfalar iyi authority olur."
+  },
+  {
+    q: "HITS matris formülasyonunda hub vektörü hangi matrisin eigenvector'üdür?",
+    opts: ["A", "Aᵀ", "AAᵀ", "AᵀA"],
+    ans: 2,
+    exp: "Hub güncelleme denklemi h⃗ ← A·a⃗ ve a⃗ ← Aᵀ·h⃗ birleştirilince h⃗ ← AAᵀ·h⃗ elde edilir. Yani hub vektörü AAᵀ'nin principal eigenvector'üdür."
+  },
+  {
+    q: "HITS'te kullanılan 'base set' nasıl oluşturulur?",
+    opts: [
+      "Sadece text query ile eşleşen sayfalardan",
+      "Root set (text eşleşmeleri) + root set'e link veren sayfalar + root set'in link verdiği sayfalar",
+      "Tüm web sayfalarından rastgele örnekleme ile",
+      "Yalnızca en yüksek PageRank'li sayfalardan"
+    ],
+    ans: 1,
+    exp: "Root set (~200 text eşleşmesi) core'dur. Base set, root set'e in-link ve out-link zinciriyle genişletilir. Bu, authority sayfalar sorgu terimini içermese bile yakalanmasını sağlar."
+  },
+  {
+    q: "Anchor text'in web aramasındaki önemi nedir?",
+    opts: [
+      "Sayfanın görsel tasarımını tanımlar",
+      "Hedef sayfanın, hedef sayfanın kendi içeriğinden daha iyi tanımlanmasını sağlayabilir",
+      "Yalnızca sayfa içi arama için kullanılır",
+      "Sayfanın son güncellenme tarihini gösterir"
+    ],
+    ans: 1,
+    exp: "IBM sitesinde 'computer' kelimesi yoktu ama IBM'e gelen linklerin anchor text'i bu kelimeyi içeriyordu. Anchor text, kullanıcıların bir sayfayı nasıl tarif ettiğini yansıtır — sayfa sahibinin tercihinden bağımsız."
+  },
+  {
+    q: "PageRank'in 'sorgudan bağımsız' olmasının pratikte ne anlamı vardır?",
+    opts: [
+      "PageRank yalnızca belirli sorgu türleri için hesaplanır",
+      "PageRank değerleri önceden hesaplanıp saklanır ve sorgu zamanında bir faktör olarak kullanılır",
+      "Tüm sorguların aynı sonuçları döndüreceği anlamına gelir",
+      "PageRank hesabı sorgu başına gerçek zamanlı yapılır"
+    ],
+    ans: 1,
+    exp: "PageRank değerleri crawl zamanında hesaplanır ve saklanır. Sorgu geldiğinde TF-IDF, cosine similarity gibi diğer faktörlerle birleştirilerek kullanılır. Bu, hesaplama maliyetini sorgu zamanından indirger."
+  },
+  {
+    q: "Düğümünün hiç outlink'i yoksa (dangling node) PageRank hesabında ne yapılır?",
+    opts: [
+      "O düğüm hesaptan çıkarılır",
+      "O düğümün tüm satırı, tüm N sayfaya eşit dağılım (1/N) olarak değiştirilir",
+      "O düğümün PageRank skoru sıfır yapılır",
+      "O düğüm kendi kendine link veriyor gibi kabul edilir"
+    ],
+    ans: 1,
+    exp: "Adjacency matrisinde outlink'i olmayan bir satır, transition probability matrix P oluşturulurken tüm elemanları 1/N olan bir satırla değiştirilir. Bu, surfer'ın bu düğümden her yere eşit olasılıkla teleport etmesi anlamına gelir."
+  },
+  {
+    q: "PageRank değeri en az kaç olabilir?",
+    opts: ["0", "α/N", "1/N", "α"],
+    ans: 1,
+    exp: "Teleport operasyonu her zaman α/N olasılıkla herhangi bir sayfaya ışınlar. Bu yüzden hiçbir sayfanın PageRank değeri α/N'den düşük olamaz. α büyüdükçe sayfalar arası PageRank farkı azalır."
+  },
+  {
+    q: "HITS algoritmasında 'topic drift' problemi nedir?",
+    opts: [
+      "PageRank değerlerinin zamanla değişmesi",
+      "Base set'in asıl sorgudan uzak, alakasız konulara kayması",
+      "Authority ve hub skorlarının yakınsamayı reddetmesi",
+      "Sorgunun yanlış dilde işlenmesi"
+    ],
+    ans: 1,
+    exp: "Base set genişletilirken ilgisiz konulardaki sayfalar da dahil olabilir. Bu sayfalar kendi aralarında güçlü link yapısı oluşturunca hub/authority hesaplaması orijinal konudan uzaklaşabilir — topic drift."
+  },
+  {
+    q: "N × N geçiş matrisinin bir satırı için ne garanti edilir?",
+    opts: [
+      "Tüm elemanlar sıfır veya bir tam sayıdır",
+      "Satır toplamı 1'dir ve tüm elemanlar [0,1] aralığındadır",
+      "Köşegen elemanı en büyük değere sahiptir",
+      "Sütun toplamı 1'dir"
+    ],
+    ans: 1,
+    exp: "Stokastik matrisin tanımı: tüm elemanlar [0,1] aralığında ve her satır toplamı tam olarak 1'dir. Bu, olasılık dağılımı koşulundan gelir — bir durumdan sonraki durumlara geçiş olasılıkları toplamı 1 olmalıdır."
+  },
+  {
+    q: "Link spam neden sadece in-link sayısını saymakla önlenemez?",
+    opts: [
+      "In-link sayımı çok hesaplı maliyetlidir",
+      "Saldırgan, hedef sayfaya işaret eden çok sayıda yapay sayfa oluşturabilir ve in-link sayısını yapay olarak şişirebilir",
+      "In-link sayısı hiçbir zaman kalite göstergesi değildir",
+      "In-linkler yalnızca kendi domain içinden sayılabilir"
+    ],
+    ans: 1,
+    exp: "Basit in-link sayımına karşı saldırgan kolayca çok sayıda sahte sayfa oluşturup hedef sayfaya bağlatabilir (link farm). PageRank bu sorunu kısmen çözer çünkü bir link'in değeri, link veren sayfanın kendi PageRank'ine bağlıdır."
+  },
+  {
+    q: "HITS'te tüm hub ve authority skorları 1 ile başlatılırsa, bir iterasyon sonunda in-degree 4 olan bir düğümün authority skoru ne olur?",
+    opts: ["1", "2", "4", "8"],
+    ans: 2,
+    exp: "a(v) ← Σ h(y) — v'ye link veren tüm y'lerin hub skorları toplamı. Başlangıçta tüm h(y) = 1, in-degree = 4 olduğundan a(v) = 1+1+1+1 = 4."
+  },
+  {
+    q: "PageRank ve HITS arasındaki en temel mimari fark hangisidir?",
+    opts: [
+      "PageRank Python'da, HITS Java'da uygulanır",
+      "PageRank tüm web için sorgu bağımsız önceden hesaplanır; HITS her sorguda belirlenen alt küme üzerinde çalışır",
+      "PageRank yönlü, HITS yönsüz graflar kullanır",
+      "PageRank tek skor, HITS üç ayrı skor üretir"
+    ],
+    ans: 1,
+    exp: "PageRank'in sorgudan bağımsız olması pratik büyük avantajdır — indeksleme sırasında hesaplanır. HITS her sorguda base set oluşturup eigenvector hesaplaması yaptığından gerçek zamanlı kullanımı daha maliyetlidir."
+  }
+];
+
+let answered = new Array(questions.length).fill(false);
+let score = 0;
+const TOTAL = questions.length;
+
+function buildQuiz() {
+  const container = document.getElementById('quizContainer');
+  container.innerHTML = '';
+  questions.forEach((q, qi) => {
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.innerHTML = `
+      <div class="q-num">Soru ${qi + 1} / ${TOTAL}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="options">
+        ${q.opts.map((o, oi) => `<button class="option" onclick="answer(${qi},${oi})">${o}</button>`).join('')}
+      </div>
+      <div class="explanation" id="exp${qi}">💡 ${q.exp}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function answer(qi, oi) {
+  if (answered[qi]) return;
+  answered[qi] = true;
+  const cards = document.querySelectorAll('.q-card');
+  const opts = cards[qi].querySelectorAll('.option');
+  opts.forEach((o, i) => {
+    o.disabled = true;
+    if (i === questions[qi].ans) o.classList.add('correct');
+    else if (i === oi) o.classList.add('wrong');
+  });
+  document.getElementById(`exp${qi}`).classList.add('show');
+  if (oi === questions[qi].ans) score++;
+  const done = answered.filter(Boolean).length;
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('scoreFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+function resetQuiz() {
+  answered = new Array(questions.length).fill(false);
+  score = 0;
+  document.getElementById('scoreVal').textContent = '0';
+  document.getElementById('scoreFill').style.width = '0%';
+  buildQuiz();
+}
+
+buildQuiz();
+</script>
+</body>
+</html>

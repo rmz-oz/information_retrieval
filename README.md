@@ -19,6 +19,7 @@ Interactive course notes and quiz system. All content is in English.
 | 9 | Relevance Feedback & Query Expansion | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch9.html) |
 | 10 | Probabilistic IR | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch10.html) |
 | 11 | Text Classification, Naive Bayes & LSI | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch11.html) |
+| 21 | Link Analysis | Ready · 20 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch21.html) |
 
 ## Topics Covered
 
@@ -54,3 +55,6 @@ Bayes theorem, Probability Ranking Principle (PRP), Binary Independence Model (B
 
 **Chapter 11 — Text Classification, Naive Bayes & LSI**
 Text classification (γ: X → C), supervised learning, Multinomial Naive Bayes, Bernoulli NB, Laplace smoothing for P(t|c), kNN classifier, Rocchio centroid classifier, LSI/SVD (A = UΣVᵀ, rank-k approximation), macro vs micro averaging, feature selection.
+
+**Chapter 21 — Link Analysis**
+Web as a graph, anchor text, link spam, PageRank (random surfer model, teleport operation, Markov chains, power iteration, topic-specific and personalized PageRank), HITS (hub & authority scores, iterative update rules, AAᵀ / AᵀA eigenvectors, base set construction).
