@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -100,40 +100,40 @@ p{margin-bottom:10px}
 <body>
 
 <div class="topbar">
-  <a href="index.html">← Ana Sayfa</a>
+  <a href="index.html">← Home</a>
   <h1>Chapter 21: Link Analysis</h1>
   <span style="font-size:.82rem;opacity:.7">Manning et al.</span>
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('lesson',this)">Ders</button>
+  <button class="tab-btn active" onclick="switchTab('lesson',this)">Lesson</button>
   <button class="tab-btn" onclick="switchTab('quiz',this)">Quiz · 20 MC</button>
-  <button class="tab-btn" onclick="switchTab('classic',this)">Klasik Sorular · 5</button>
+  <button class="tab-btn" onclick="switchTab('classic',this)">Classic Questions · 5</button>
 </div>
 
 <!-- ==================== LESSON ==================== -->
 <div id="lesson" class="section active">
 <div class="container">
 
-  <!-- Giriş -->
+  <!-- Introduction -->
   <div class="card">
-    <h2>Bölüm 21 — Link Analizi: Genel Bakış</h2>
-    <p>Web'in grafik yapısı ve hiperlinkler, web arama motorlarının sıralama hesaplamalarında kritik bir rol oynar. Bu bölümde;</p>
+    <h2>Chapter 21 — Link Analysis: Overview</h2>
+    <p>The graph structure of the web and hyperlinks play a critical role in the ranking computations of web search engines. In this chapter:</p>
     <ul>
-      <li><strong>Web'in bir graf olarak modellenmesi</strong> ve anchor text'in önemi</li>
-      <li><strong>PageRank</strong>: rastgele sörf modeline dayalı sorgudan bağımsız sıralama</li>
-      <li><strong>HITS</strong>: Hubs &amp; Authorities, sorguya duyarlı link analizi</li>
+      <li><strong>Modeling the Web as a Graph</strong> and the importance of anchor text</li>
+      <li><strong>PageRank</strong>: query-independent ranking based on the random surfer model</li>
+      <li><strong>HITS</strong>: Hubs &amp; Authorities, query-sensitive link analysis</li>
     </ul>
     <div class="info-box">
-      <strong>Temel Sezgi</strong>
-      Bir sayfaya link veren sayfalar, o sayfanın kalitesini "onaylamış" sayılır — tıpkı akademik atıf analizindeki gibi. Link analizi, bu onay zincirini matematiksel olarak modeller.
+      <strong>Core Intuition</strong>
+      Pages that link to a page are considered to have "endorsed" that page's quality — just as in academic citation analysis. Link analysis mathematically models this chain of endorsements.
     </div>
     <div class="flow">
-      <div class="flow-box">Web Grafı</div>
+      <div class="flow-box">Web Graph</div>
       <div class="flow-arrow">→</div>
-      <div class="flow-box">Markov Zinciri</div>
+      <div class="flow-box">Markov Chain</div>
       <div class="flow-arrow">→</div>
-      <div class="flow-box">Durağan Dağılım</div>
+      <div class="flow-box">Steady-State Distribution</div>
       <div class="flow-arrow">→</div>
       <div class="flow-box">PageRank / HITS</div>
     </div>
@@ -141,230 +141,230 @@ p{margin-bottom:10px}
 
   <!-- 21.1 Web as a Graph -->
   <div class="card">
-    <h2>21.1 Web'i Bir Graf Olarak Görmek</h2>
-    <p>Web grafı, her web sayfasının bir <strong>düğüm (node)</strong>, her hiperlinkın ise yönlü bir <strong>kenar (edge)</strong> olduğu devasa bir yönlü graftır.</p>
+    <h2>21.1 Viewing the Web as a Graph</h2>
+    <p>The web graph is a massive directed graph in which every web page is a <strong>node</strong> and every hyperlink is a directed <strong>edge</strong>.</p>
 
-    <h3>İki Temel Sezgi</h3>
+    <h3>Two Core Intuitions</h3>
     <div class="grid2">
       <div class="g-card">
         <h4>1. Anchor Text</h4>
-        B sayfasına işaret eden linkin anchor text'i, B sayfasının iyi bir açıklamasıdır. Kullanıcılar bir sayfayı "kendi dillerinde" tarif ederken anchor text oluşturur.
+        The anchor text of a link pointing to page B is a good description of page B. Users create anchor text when they describe a page "in their own words."
       </div>
       <div class="g-card">
-        <h4>2. Link = Onay</h4>
-        A sayfasından B'ye verilen link, A'nın B'yi "onayladığı" anlamına gelir. (İç linkler — ortak template'den gelen — bu değerlendirmenin dışında tutulur.)
+        <h4>2. Link = Endorsement</h4>
+        A link from page A to page B means that A has "endorsed" B. (Internal links — coming from a shared template — are excluded from this assessment.)
       </div>
     </div>
 
-    <h3>21.1.1 Anchor Text ve Web Grafı</h3>
-    <p>Klasik örnek: IBM'in ana sayfasında <em>computer</em> kelimesi geçmiyordu, Yahoo'nun sayfasında <em>portal</em> geçmiyordu. Oysa bu sayfalara gelen linklerin anchor text'leri bu kelimeleri içeriyordu. Sonuç olarak:</p>
+    <h3>21.1.1 Anchor Text and the Web Graph</h3>
+    <p>Classic example: IBM's homepage didn't contain the word <em>computer</em>, and Yahoo's page didn't contain <em>portal</em>. Yet the anchor texts of links to these pages did contain these words. As a result:</p>
     <div class="success-box">
-      <strong>Anchor Text Gücü</strong>
-      Anchor text, hedef sayfayı <em>hedef sayfanın kendisinden daha iyi</em> tanımlayabilir. Arama motorları, anchor text'i bağlı olduğu sayfanın indeksleme terimi olarak kullanır.
+      <strong>Power of Anchor Text</strong>
+      Anchor text can describe the target page <em>better than the target page's own content</em>. Search engines use anchor text as an indexing term for the page it links to.
     </div>
     <div class="warning-box">
-      <strong>Link Spam Riski</strong>
-      "Big Blue" → IBM veya "evil empire" gibi derogatory anchor text örnekleri, arama motorlarını manipüle etmek için kasıtlı olarak oluşturulan yanıltıcı anchor text'e yol açabilir (Google bombing). Bu bir spam türüdür.
+      <strong>Link Spam Risk</strong>
+      Derogatory anchor text examples such as "Big Blue" → IBM or "evil empire" can lead to deliberately crafted misleading anchor text used to manipulate search engines (Google bombing). This is a form of spam.
     </div>
-    <p><strong>Extended anchor text</strong>: Linkin çevresindeki metin penceresi de anchor text kadar faydalı bilgi içerebilir.</p>
+    <p><strong>Extended anchor text</strong>: The text window surrounding a link can also contain information as useful as the anchor text itself.</p>
   </div>
 
   <!-- 21.2 PageRank -->
   <div class="card card-teal">
     <h2>21.2 PageRank</h2>
-    <p>PageRank, her web sayfasına <strong>0 ile 1 arasında</strong> bir sayısal skor atar. Bu skor, sayfanın link yapısına göre belirlenen <em>statik kalite ölçüsüdür</em> — sorgudan bağımsızdır.</p>
+    <p>PageRank assigns a numerical score <strong>between 0 and 1</strong> to every web page. This score is a <em>static quality measure</em> determined by the page's link structure — it is independent of any query.</p>
 
-    <h3>Rastgele Sörf Modeli (Random Surfer)</h3>
-    <p>Bir web sayfasında başlayan rastgele bir gezgin, her adımda bulunduğu sayfanın outlink'lerinden birini eşit olasılıkla seçer ve tıklar. Şekil 21.1'deki gibi: A düğümünden çıkan 3 link varsa (B, C, D), her birine 1/3 olasılıkla geçilir.</p>
+    <h3>Random Surfer Model</h3>
+    <p>A random surfer starting on a web page selects one of the page's outlinks uniformly at random and clicks it at each step. As in Figure 21.1: if node A has 3 outlinks (B, C, D), each is followed with probability 1/3.</p>
 
     <div class="info-box">
-      <strong>Teleport Operasyonu</strong>
-      Çıkan linki olmayan (dangling node) bir sayfada ne olur? Veya gezgin sıkışırsa? Çözüm: <strong>teleport</strong>. Gezgin, her adımda α olasılıkla herhangi bir sayfaya ışınlanır (tüm N sayfadan biri, eşit 1/N olasılıkla). Tipik α = 0.1.
+      <strong>Teleport Operation</strong>
+      What happens at a page with no outlinks (dangling node)? Or if the surfer gets stuck? Solution: <strong>teleport</strong>. At each step, the surfer teleports to any page with probability α (one of N pages, each with equal probability 1/N). Typical α = 0.1.
     </div>
 
     <div class="grid2">
       <div class="g-card">
-        <h4>Outlink varken</h4>
-        (1 − α) olasılıkla rastgele bir outlink'e git<br>
-        α olasılıkla herhangi bir sayfaya teleport et
+        <h4>When Outlinks Exist</h4>
+        Follow a random outlink with probability (1 − α)<br>
+        Teleport to any page with probability α
       </div>
       <div class="g-card">
-        <h4>Outlink yokken</h4>
-        Her zaman teleport et<br>
-        (tüm web sayfalarından birine eşit olasılıkla)
+        <h4>When No Outlinks Exist</h4>
+        Always teleport<br>
+        (to any web page with equal probability)
       </div>
     </div>
 
-    <h3>21.2.1 Markov Zincirleri</h3>
-    <p>Rastgele sörf modeli bir <strong>Markov zinciri</strong> olarak formüle edilir: her web sayfası bir durum, geçiş olasılıkları da sayfalar arası link yapısına göre belirlenir.</p>
+    <h3>21.2.1 Markov Chains</h3>
+    <p>The random surfer model is formulated as a <strong>Markov chain</strong>: each web page is a state, and transition probabilities are determined by the link structure between pages.</p>
 
-    <div class="math">∀i, j, P_ij ∈ [0,1]    ve    ∀i, Σⱼ P_ij = 1</div>
+    <div class="math">∀i, j, P_ij ∈ [0,1]    and    ∀i, Σⱼ P_ij = 1</div>
 
-    <p>Geçiş olasılık matrisi P şöyle elde edilir:</p>
+    <p>The transition probability matrix P is obtained as follows:</p>
     <ol>
-      <li>A matrisinde (adjacency) hiç 1 içermeyen satırlar varsa tüm elemanları 1/N yap.</li>
-      <li>Her satırdaki 1'leri, o satırdaki 1 sayısına böl (eşit outlink dağılımı).</li>
-      <li>Elde edilen matrisi (1 − α) ile çarp.</li>
-      <li>Her elemanına α/N ekle → bu P matrisidir.</li>
+      <li>In the adjacency matrix A, replace any row containing no 1s with all elements set to 1/N.</li>
+      <li>Divide each 1 in a row by the number of 1s in that row (equal outlink distribution).</li>
+      <li>Multiply the resulting matrix by (1 − α).</li>
+      <li>Add α/N to each element → this is matrix P.</li>
     </ol>
 
     <div class="success-box">
-      <strong>Stokastik Matris</strong>
-      P matrisi bir stokastik matristir: tüm elemanları [0,1] aralığında ve her satır toplamı 1'dir. En büyük özdeğerine karşılık gelen <em>principal left eigenvector</em>'ü vardır; bu özdeğer 1'dir.
+      <strong>Stochastic Matrix</strong>
+      Matrix P is a stochastic matrix: all elements are in [0,1] and each row sums to 1. It has a <em>principal left eigenvector</em> corresponding to its largest eigenvalue, which is 1.
     </div>
 
-    <h3>Ergodik Markov Zinciri</h3>
-    <p>Bir Markov zinciri <strong>ergodikse</strong>, herhangi iki durum arasında pozitif geçiş olasılığı zinciri çalıştırmaya devam ettiğinde sonunda pozitif olur. Bunun için:</p>
+    <h3>Ergodic Markov Chain</h3>
+    <p>A Markov chain is <strong>ergodic</strong> if the positive transition probability between any two states eventually becomes positive as the chain runs. Requirements:</p>
     <div class="grid2">
       <div class="g-card">
-        <h4>İndirgenemezlik (Irreducibility)</h4>
-        Her durumdan her duruma sıfır olmayan olasılıkla ulaşılabilir.
+        <h4>Irreducibility</h4>
+        Every state is reachable from every other state with non-zero probability.
       </div>
       <div class="g-card">
-        <h4>Aperiodiklik (Aperiodicity)</h4>
-        Durumlar periyodik kümeler halinde bölünmez; geçişler belirli döngüsel paternler izlemez.
+        <h4>Aperiodicity</h4>
+        States do not split into periodic subsets; transitions do not follow fixed cyclic patterns.
       </div>
     </div>
     <div class="info-box">
       <strong>Theorem 21.1 (Steady-State)</strong>
-      Her ergodik Markov zinciri için, η(i,t) = t adımda durum i'ye toplam ziyaret sayısı olmak üzere:<br>
+      For every ergodic Markov chain, where η(i,t) = total visits to state i in t steps:<br>
       <strong>lim (t→∞) η(i,t)/t = π(i)</strong><br>
-      Bu π(i) değeri, durum i'nin durağan-hal (steady-state) olasılığıdır ve sayfanın PageRank'idir.
+      This π(i) value is the steady-state probability of state i and is the page's PageRank.
     </div>
 
-    <h3>21.2.2 PageRank Hesabı: Power Iteration</h3>
-    <p>PageRank değerleri P matrisinin <strong>principal left eigenvector</strong>'ü olarak bulunur:</p>
+    <h3>21.2.2 PageRank Computation: Power Iteration</h3>
+    <p>PageRank values are found as the <strong>principal left eigenvector</strong> of matrix P:</p>
     <div class="math">π̃ · P = 1 · π̃</div>
-    <p><strong>Power Iteration yöntemi:</strong></p>
+    <p><strong>Power Iteration method:</strong></p>
     <ol>
-      <li>x̃₀ ile başla (örn. (1, 0, 0, ...) — surfer ilk sayfada başlıyor)</li>
+      <li>Start with x̃₀ (e.g. (1, 0, 0, ...) — surfer starts at first page)</li>
       <li>x̃₁ = x̃₀ · P</li>
       <li>x̃₂ = x̃₁ · P = x̃₀ · P²</li>
-      <li>... t büyüdükçe x̃ₜ durağan dağılıma yaklaşır</li>
-      <li>Ardışık iterasyonlar arasındaki değişim eşiğin altına inince dur</li>
+      <li>... as t grows, x̃ₜ converges to the steady-state distribution</li>
+      <li>Stop when the change between successive iterations falls below a threshold</li>
     </ol>
     <div class="warning-box">
-      <strong>PageRank Sorgudan Bağımsızdır</strong>
-      PageRank değerleri önceden hesaplanır ve sorgu zamanında yalnızca bir faktör olarak kullanılır. Sayfaların göreli sıralaması sorguya göre değişebileceğinden PageRank tek başına sıralama için yetmez — cosine similarity ve diğer faktörlerle birleştirilir.
+      <strong>PageRank is Query-Independent</strong>
+      PageRank values are precomputed and used only as one factor at query time. Since the relative ranking of pages can vary by query, PageRank alone is insufficient for ranking — it is combined with cosine similarity and other factors.
     </div>
 
-    <h3>21.2.3 Konuya Özgü PageRank (Topic-Specific)</h3>
-    <p>Standart PageRank'te teleport tüm web'e eşit dağılır. <strong>Topic-Specific PageRank</strong>'te ise teleport yalnızca belirli bir konudaki (örn. spor) sayfa kümesi S'e yapılır.</p>
+    <h3>21.2.3 Topic-Specific PageRank</h3>
+    <p>In standard PageRank, teleport is distributed equally across the entire web. In <strong>Topic-Specific PageRank</strong>, teleport goes only to a set S of pages on a specific topic (e.g. sports).</p>
     <div class="grid2">
       <div class="g-card">
-        <h4>Spor PageRank (π̃ₛ)</h4>
-        Teleport sadece spor sayfalarına. Spor sayfaları daha yüksek skor alır.
+        <h4>Sports PageRank (π̃ₛ)</h4>
+        Teleport only to sports pages. Sports pages receive higher scores.
       </div>
       <div class="g-card">
-        <h4>Siyaset PageRank (π̃ₚ)</h4>
-        Teleport sadece siyaset sayfalarına. Siyaset sayfaları öne çıkar.
+        <h4>Politics PageRank (π̃ₚ)</h4>
+        Teleport only to politics pages. Politics pages are favored.
       </div>
     </div>
-    <p><strong>Kişiselleştirilmiş PageRank:</strong> Kullanıcı %60 spor, %40 siyaset ilgiliyse:</p>
+    <p><strong>Personalized PageRank:</strong> If the user is 60% interested in sports and 40% in politics:</p>
     <div class="math">Personalized PageRank = 0.6 · π̃ₛ + 0.4 · π̃ₚ</div>
     <div class="success-box">
-      <strong>Verimlilik</strong>
-      Her kullanıcı profili için ayrı matris hesaplamak gerekmez. Konu bazlı PageRank vektörlerinin doğrusal kombinasyonu yeterlidir — bu Markov zincirlerinin doğrusal yapısından kaynaklanır.
+      <strong>Efficiency</strong>
+      There is no need to compute a separate matrix for each user profile. A linear combination of topic-based PageRank vectors is sufficient — this follows from the linear structure of Markov chains.
     </div>
   </div>
 
   <!-- 21.3 HITS -->
   <div class="card card-amber">
-    <h2>21.3 Hubs ve Authorities (HITS)</h2>
-    <p>HITS (Hyperlink-Induced Topic Search), PageRank'ten farklı olarak <strong>sorgya duyarlı</strong> bir link analizi yöntemidir. Her sayfaya iki ayrı skor verilir:</p>
+    <h2>21.3 Hubs and Authorities (HITS)</h2>
+    <p>HITS (Hyperlink-Induced Topic Search), unlike PageRank, is a <strong>query-sensitive</strong> link analysis method. Each page is assigned two separate scores:</p>
     <div class="grid2">
       <div class="g-card">
-        <h4>Hub Skoru h(v)</h4>
-        İyi hub'lar, birçok iyi authority'ye link verir. "Yol gösterici" sayfalar — elle derlenmiş kaynak listeleri gibi.
+        <h4>Hub Score h(v)</h4>
+        Good hubs link to many good authorities. "Guiding" pages — like manually compiled resource lists.
       </div>
       <div class="g-card">
-        <h4>Authority Skoru a(v)</h4>
-        İyi authority'ler, birçok iyi hub tarafından gösterilir. "Uzman" sayfalar — bir konunun birincil kaynakları.
+        <h4>Authority Score a(v)</h4>
+        Good authorities are pointed to by many good hubs. "Expert" pages — primary sources on a topic.
       </div>
     </div>
 
     <div class="info-box">
-      <strong>Döngüsel Tanım — Iteratif Çözüm</strong>
-      İyi hub'lar → iyi authority'lere işaret eder<br>
-      İyi authority'ler → iyi hub'lar tarafından gösterilir<br>
-      Bu döngüsel tanım iteratif hesapla çözülür.
+      <strong>Circular Definition — Iterative Solution</strong>
+      Good hubs → point to good authorities<br>
+      Good authorities → are pointed to by good hubs<br>
+      This circular definition is resolved by iterative computation.
     </div>
 
-    <h3>Iteratif Güncelleme Kuralları</h3>
-    <div class="math">h(v) ← Σ a(y)  [v → y olan tüm y için]<br>a(v) ← Σ h(y)  [y → v olan tüm y için]</div>
-    <p>Matris formunda (A = adjacency matrisi):</p>
+    <h3>Iterative Update Rules</h3>
+    <div class="math">h(v) ← Σ a(y)  [for all y with v → y]<br>a(v) ← Σ h(y)  [for all y with y → v]</div>
+    <p>In matrix form (A = adjacency matrix):</p>
     <div class="math">h⃗ ← A · a⃗<br>a⃗ ← Aᵀ · h⃗</div>
-    <p>Birleştirilince:</p>
+    <p>Combined:</p>
     <div class="math">h⃗ ← AAᵀ · h⃗<br>a⃗ ← AᵀA · a⃗</div>
     <div class="success-box">
-      <strong>Özdeğer Bağlantısı</strong>
-      Bu denklemler AAᵀ ve AᵀA matrislerinin eigenvector denklemlerine benzer. Hub ve authority vektörleri sırasıyla AAᵀ ve AᵀA'nın principal eigenvector'leridir.
+      <strong>Eigenvalue Connection</strong>
+      These equations resemble the eigenvector equations of matrices AAᵀ and AᵀA. The hub and authority vectors are the principal eigenvectors of AAᵀ and AᵀA respectively.
     </div>
 
-    <h3>HITS Algoritması — Özet</h3>
+    <h3>HITS Algorithm — Summary</h3>
     <ol>
-      <li>Hedef web sayfaları alt kümesini topla (<strong>base set</strong>)</li>
-      <li>Bu alt küme üzerindeki grafı oluştur, AAᵀ ve AᵀA matrislerini hesapla</li>
-      <li>Principal eigenvector'leri bul → hub ve authority skorları</li>
-      <li>En yüksek skorlu hub'ları ve authority'leri döndür</li>
+      <li>Collect a subset of target web pages (<strong>base set</strong>)</li>
+      <li>Build the graph over this subset, compute matrices AAᵀ and AᵀA</li>
+      <li>Find principal eigenvectors → hub and authority scores</li>
+      <li>Return the highest-scoring hubs and authorities</li>
     </ol>
 
-    <h3>21.3.1 Web Alt Kümesinin Seçimi</h3>
-    <p>Neden direkt text query sayfaları kullanmıyoruz? Çünkü iyi authority sayfalar sorgu terimini içermeyebilir (örn. IBM sitesinde "computer" kelimesi yok ama IBM bir bilgisayar firmasıdır).</p>
+    <h3>21.3.1 Selecting the Web Subset</h3>
+    <p>Why don't we use direct text query pages? Because good authority pages may not contain the query term (e.g. the word "computer" does not appear on IBM's site, yet IBM is a computer company).</p>
     <div class="grid2">
       <div class="g-card">
         <h4>Root Set</h4>
-        Text query ile eşleşen ~200 sayfa. Bunlar base set'in çekirdeğini oluşturur.
+        ~200 pages matching the text query. These form the core of the base set.
       </div>
       <div class="g-card">
         <h4>Base Set</h4>
-        Root set + root set'e link veren sayfalar + root set'in link verdiği sayfalar. Hem hub'lar hem authority'ler buraya dahil olur.
+        Root set + pages linking to the root set + pages linked from the root set. Both hubs and authorities are included here.
       </div>
     </div>
     <div class="warning-box">
-      <strong>Çok Dilli Yan Etki</strong>
-      HITS çalıştırıldığında, base set büyümesi sayesinde sorgu dili dışındaki sayfalar da öne çıkabilir. Örn. İngilizce "japan elementary schools" sorgusu Japonca sayfaları authority olarak buldu — saf link yapısından kaynaklanır, çeviri yoktur.
+      <strong>Multilingual Side Effect</strong>
+      When HITS runs, pages outside the query language can emerge due to base set expansion. E.g. the English query "japan elementary schools" found Japanese pages as authorities — this stems from pure link structure, not translation.
     </div>
   </div>
 
   <!-- PageRank vs HITS -->
   <div class="card card-purple">
-    <h2>PageRank vs. HITS — Karşılaştırma</h2>
+    <h2>PageRank vs. HITS — Comparison</h2>
     <table>
       <tr>
-        <th>Özellik</th>
+        <th>Feature</th>
         <th>PageRank</th>
         <th>HITS</th>
       </tr>
       <tr>
-        <td>Sorgu bağımsızlığı</td>
-        <td>Evet (önceden hesaplanır)</td>
-        <td>Hayır (sorgu zamanında hesaplanır)</td>
+        <td>Query independence</td>
+        <td>Yes (precomputed)</td>
+        <td>No (computed at query time)</td>
       </tr>
       <tr>
-        <td>Skor sayısı</td>
-        <td>1 skor (PR)</td>
-        <td>2 skor (hub + authority)</td>
+        <td>Number of scores</td>
+        <td>1 score (PR)</td>
+        <td>2 scores (hub + authority)</td>
       </tr>
       <tr>
-        <td>Algoritma temeli</td>
-        <td>Markov zinciri / rastgele sörf</td>
+        <td>Algorithmic basis</td>
+        <td>Markov chain / random surfer</td>
         <td>Eigenvector (AAᵀ, AᵀA)</td>
       </tr>
       <tr>
-        <td>Web kapsamı</td>
-        <td>Tüm web</td>
-        <td>Sorgu etrafındaki alt küme</td>
+        <td>Web coverage</td>
+        <td>Entire web</td>
+        <td>Subset around the query</td>
       </tr>
       <tr>
-        <td>Spam direnci</td>
-        <td>Teleport ile kısmen korunur</td>
-        <td>Topic drift riski var</td>
+        <td>Spam resistance</td>
+        <td>Partially protected via teleport</td>
+        <td>Topic drift risk</td>
       </tr>
       <tr>
-        <td>Kullanım</td>
-        <td>Genel web sıralaması</td>
-        <td>Broad-topic aramalar</td>
+        <td>Usage</td>
+        <td>General web ranking</td>
+        <td>Broad-topic searches</td>
       </tr>
     </table>
   </div>
@@ -376,12 +376,12 @@ p{margin-bottom:10px}
 <div id="quiz" class="section">
 <div class="container">
   <div class="score-row">
-    <span class="score-label">Puan</span>
+    <span class="score-label">Score</span>
     <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
     <span class="score-val"><span id="scoreVal">0</span> / 20</span>
   </div>
   <div id="quizContainer"></div>
-  <button class="reset-btn" onclick="resetQuiz()">Sıfırla &amp; Tekrar Çöz</button>
+  <button class="reset-btn" onclick="resetQuiz()">Reset &amp; Retry</button>
 </div>
 </div>
 
@@ -391,89 +391,89 @@ p{margin-bottom:10px}
 
   <div class="classic-card">
     <div class="classic-header" onclick="toggleClassic(this)">
-      <span>Soru 1 — PageRank Power Iteration Hesabı</span>
+      <span>Question 1 — PageRank Power Iteration Computation</span>
       <span class="classic-chevron">▼</span>
     </div>
     <div class="classic-body">
-      <p><strong>Soru:</strong> Şekil 21.2'deki 3 düğümlü Markov zinciri için (A→B 0.5, A→C 0.5; B→A 1; C→A 1) geçiş olasılık matrisi nedir ve α = 0.5 teleport oranıyla durağan dağılımı bulunuz.</p>
-      <p><strong>Cevap:</strong></p>
-      <p>Geçiş matrisi (teleport öncesi):</p>
+      <p><strong>Question:</strong> For the 3-node Markov chain in Figure 21.2 (A→B 0.5, A→C 0.5; B→A 1; C→A 1), find the transition probability matrix and compute the steady-state distribution with teleport rate α = 0.5.</p>
+      <p><strong>Answer:</strong></p>
+      <p>Transition matrix (before teleport):</p>
       <pre><code>P_raw = | 0    0.5  0.5 |
         | 1    0    0   |
         | 1    0    0   |</code></pre>
-      <p>α = 0.5 ile teleport eklenince: P = (1−0.5)·P_raw + (0.5/3)·J (J: tüm elemanları 1 olan matris)</p>
+      <p>With teleport added at α = 0.5: P = (1−0.5)·P_raw + (0.5/3)·J (J: all-ones matrix)</p>
       <pre><code>P = | 1/6   2/3   1/6 |
     | 5/12  1/6   5/12|
     | 1/6   2/3   1/6 |</code></pre>
-      <p>Simetri gözlemiyle: durum 1 ve 3 aynı steady-state olasılığına sahip (p). Durum 2 için 1−2p. π̃ = π̃·P denklemini çözeriz: p = 5/18, dolayısıyla <strong>π̃ = (5/18, 4/9, 5/18)</strong>.</p>
+      <p>By symmetry: states 1 and 3 share the same steady-state probability (p). For state 2: 1−2p. Solving π̃ = π̃·P: p = 5/18, therefore <strong>π̃ = (5/18, 4/9, 5/18)</strong>.</p>
     </div>
   </div>
 
   <div class="classic-card">
     <div class="classic-header" onclick="toggleClassic(this)">
-      <span>Soru 2 — HITS Hub ve Authority Güncellemesi</span>
+      <span>Question 2 — HITS Hub and Authority Update</span>
       <span class="classic-chevron">▼</span>
     </div>
     <div class="classic-body">
-      <p><strong>Soru:</strong> Tüm hub ve authority skorları 1 ile başlatılırsa, bir iterasyon sonrası in-degree 3 olan bir düğümün authority skoru ne olur? out-degree 2 olan bir düğümün hub skoru ne olur?</p>
-      <p><strong>Cevap:</strong></p>
-      <p>Authority güncelleme kuralı: <strong>a(v) ← Σ h(y)</strong> (y → v olan tüm y'ler için)</p>
-      <p>Başlangıçta tüm h(y) = 1 olduğundan, in-degree 3 olan v için: <strong>a(v) = 1 + 1 + 1 = 3</strong></p>
-      <p>Hub güncelleme kuralı: <strong>h(v) ← Σ a(y)</strong> (v → y olan tüm y'ler için)</p>
-      <p>Başlangıçta tüm a(y) = 1 olduğundan, out-degree 2 olan v için: <strong>h(v) = 1 + 1 = 2</strong></p>
-      <p>Genel kural: ilk iterasyonda a(v) = in-degree(v), h(v) = out-degree(v).</p>
+      <p><strong>Question:</strong> If all hub and authority scores are initialized to 1, what is the authority score of a node with in-degree 3 after one iteration? What is the hub score of a node with out-degree 2?</p>
+      <p><strong>Answer:</strong></p>
+      <p>Authority update rule: <strong>a(v) ← Σ h(y)</strong> (for all y such that y → v)</p>
+      <p>Since all h(y) = 1 initially, for v with in-degree 3: <strong>a(v) = 1 + 1 + 1 = 3</strong></p>
+      <p>Hub update rule: <strong>h(v) ← Σ a(y)</strong> (for all y such that v → y)</p>
+      <p>Since all a(y) = 1 initially, for v with out-degree 2: <strong>h(v) = 1 + 1 = 2</strong></p>
+      <p>General rule: after the first iteration, a(v) = in-degree(v), h(v) = out-degree(v).</p>
     </div>
   </div>
 
   <div class="classic-card">
     <div class="classic-header" onclick="toggleClassic(this)">
-      <span>Soru 3 — Ergodik Markov Zinciri Koşulları</span>
+      <span>Question 3 — Ergodic Markov Chain Conditions</span>
       <span class="classic-chevron">▼</span>
     </div>
     <div class="classic-body">
-      <p><strong>Soru:</strong> Üç durumlu bir Markov zinciri düşünün: A'dan B'ye olasılık 1; B'den A'ya pA, C'ye (1−pA); C'den A'ya olasılık 1. Hangi pA ∈ [0,1] değerleri için zincir ergodiktir?</p>
-      <p><strong>Cevap:</strong></p>
-      <p><strong>İndirgenemezlik:</strong> A→B→C→A yolu mevcutsa tüm durumlar birbirine erişilebilir olur. B'den C'ye gidebilmek için (1−pA) &gt; 0, yani pA &lt; 1 olmalı.</p>
-      <p><strong>Aperiodiklik:</strong> A→B→A döngüsü periyod 2 oluşturabilir. Ancak B'den C'ye de gidilebiliyorsa (pA &lt; 1) ve C'den A'ya gidiliyorsa, farklı uzunluklarda döngüler mevcut olur ve aperiodiklik sağlanır.</p>
-      <p>pA = 1 ise B'den C'ye hiç gidilemez, C durumu erişilemez → indirgenemez değil.</p>
-      <p>Sonuç: Zincir <strong>0 ≤ pA &lt; 1</strong> için ergodiktir.</p>
+      <p><strong>Question:</strong> Consider a three-state Markov chain: probability 1 from A to B; pA from B to A, (1−pA) to C; probability 1 from C to A. For which values pA ∈ [0,1] is the chain ergodic?</p>
+      <p><strong>Answer:</strong></p>
+      <p><strong>Irreducibility:</strong> If the path A→B→C→A exists, all states are reachable from each other. To reach C from B, (1−pA) &gt; 0, so pA &lt; 1.</p>
+      <p><strong>Aperiodicity:</strong> The A→B→A cycle could create period 2. However, if B can also go to C (pA &lt; 1) and C goes to A, cycles of different lengths exist, ensuring aperiodicity.</p>
+      <p>If pA = 1, C is unreachable from B → not irreducible.</p>
+      <p>Conclusion: The chain is ergodic for <strong>0 ≤ pA &lt; 1</strong>.</p>
     </div>
   </div>
 
   <div class="classic-card">
     <div class="classic-header" onclick="toggleClassic(this)">
-      <span>Soru 4 — Topic-Specific PageRank ve Kişiselleştirme</span>
+      <span>Question 4 — Topic-Specific PageRank and Personalization</span>
       <span class="classic-chevron">▼</span>
     </div>
     <div class="classic-body">
-      <p><strong>Soru:</strong> Neden her kullanıcı profili için ayrı bir PageRank vektörü hesaplamak zorunda değiliz? Konu bazlı vektörler nasıl kullanılır?</p>
-      <p><strong>Cevap:</strong></p>
-      <p>Markov zincirlerinin doğrusal yapısı sayesinde, bir kullanıcının kişiselleştirilmiş PageRank vektörü, konu bazlı PageRank vektörlerinin <strong>doğrusal kombinasyonu</strong> olarak ifade edilebilir.</p>
-      <p>Kullanıcının ilgi profili: q oranı spor, (1−q) oranı siyaset:</p>
-      <pre><code>π̃_kişisel = q · π̃_spor + (1−q) · π̃_siyaset</code></pre>
-      <p>Bu, her konu için bir kez PageRank hesaplamanın yeterli olduğu anlamına gelir. Farklı kullanıcı profilleri için sadece bu önceden hesaplanmış vektörlerin farklı ağırlıklarda birleştirilmesi gerekir — yeni matris hesabı gerekmez.</p>
+      <p><strong>Question:</strong> Why do we not need to compute a separate PageRank vector for each user profile? How are topic-based vectors used?</p>
+      <p><strong>Answer:</strong></p>
+      <p>Thanks to the linear structure of Markov chains, a user's personalized PageRank vector can be expressed as a <strong>linear combination</strong> of topic-based PageRank vectors.</p>
+      <p>User interest profile: proportion q sports, (1−q) politics:</p>
+      <pre><code>π̃_personal = q · π̃_sports + (1−q) · π̃_politics</code></pre>
+      <p>This means computing PageRank once per topic is sufficient. For different user profiles, these precomputed vectors simply need to be combined with different weights — no new matrix computation is needed.</p>
     </div>
   </div>
 
   <div class="classic-card">
     <div class="classic-header" onclick="toggleClassic(this)">
-      <span>Soru 5 — HITS ve PageRank Spam Savunması</span>
+      <span>Question 5 — HITS and PageRank Spam Defense</span>
       <span class="classic-chevron">▼</span>
     </div>
     <div class="classic-body">
-      <p><strong>Soru:</strong> "Link spam" nedir ve PageRank ile HITS bu sorunla nasıl başa çıkar?</p>
-      <p><strong>Cevap:</strong></p>
-      <p><strong>Link Spam:</strong> Bir saldırgan, hedef sayfanın in-link sayısını yapay olarak artırmak için çok sayıda sahte sayfa oluşturur. Amaç, hedef sayfanın kalite skorunu yükseltmektir.</p>
-      <p><strong>PageRank'in savunması:</strong></p>
+      <p><strong>Question:</strong> What is "link spam" and how do PageRank and HITS handle it?</p>
+      <p><strong>Answer:</strong></p>
+      <p><strong>Link Spam:</strong> An attacker creates many fake pages to artificially inflate the in-link count of a target page. The goal is to boost the target page's quality score.</p>
+      <p><strong>PageRank's defense:</strong></p>
       <ul>
-        <li>Teleport operasyonu, zincirin ergodik kalmasını sağlar ve tek bir kaynaktan gelen aşırı link birikimini sınırlar.</li>
-        <li>Yüksek PageRank'li sayfalardan gelen linklerin etkisi çok daha büyük olduğundan, düşük kaliteli spam sayfalarından gelen linklerin katkısı zaten düşüktür.</li>
-        <li>Arama motorları ek sinyallerle (domain trust, link örüntüsü analizi) spam tespiti yapar.</li>
+        <li>The teleport operation keeps the chain ergodic and limits the accumulation of links from a single source.</li>
+        <li>Since links from high-PageRank pages carry much more weight, contributions from low-quality spam pages are already small.</li>
+        <li>Search engines detect spam using additional signals (domain trust, link pattern analysis).</li>
       </ul>
-      <p><strong>HITS'in zayıflığı:</strong></p>
+      <p><strong>HITS's weakness:</strong></p>
       <ul>
-        <li>HITS sorgu zamanında hesaplandığından, base set oluşturma aşamasında spam sayfalar dahil olabilir.</li>
-        <li>"Topic drift": base set ilgisiz konulara kayabilir, manipülasyona daha açıktır.</li>
+        <li>Since HITS is computed at query time, spam pages can be included during the base set construction stage.</li>
+        <li>"Topic drift": the base set can drift toward unrelated topics, making it more susceptible to manipulation.</li>
       </ul>
     </div>
   </div>
@@ -498,204 +498,204 @@ function toggleClassic(header) {
 
 const questions = [
   {
-    q: "PageRank'in temel sezgisi nedir?",
+    q: "What is the core intuition behind PageRank?",
     opts: [
-      "Daha uzun sayfalara daha yüksek skor verilir",
-      "Daha fazla in-link alan sayfalar önemlidir; önemli sayfalardan gelen linklerin katkısı daha büyüktür",
-      "Sayfa içeriğindeki terim frekansı sıralamayı belirler",
-      "Daha eski domainler daha güvenilirdir"
+      "Longer pages receive higher scores",
+      "Pages with more in-links are important; links from important pages carry greater weight",
+      "Term frequency in page content determines ranking",
+      "Older domains are more trustworthy"
     ],
     ans: 1,
-    exp: "PageRank, link yapısını 'onay' olarak görür. Önemli sayfalardan gelen linklerin etkisi daha büyüktür — tıpkı atıf analizinde prestijli dergilerdeki atıfların daha değerli olması gibi."
+    exp: "PageRank treats link structure as 'endorsement'. Links from important pages carry more weight — just as citations in prestigious journals are more valuable in citation analysis."
   },
   {
-    q: "Teleport operasyonu neden gereklidir?",
+    q: "Why is the teleport operation necessary?",
     opts: [
-      "Arama hızını artırmak için",
-      "Outlink'i olmayan (dangling node) sayfalar ile döngüsel yapılarda random surfer'ın sıkışmasını önlemek için",
-      "Hub sayfaları bulmak için",
-      "Anchor text ağırlığını hesaplamak için"
+      "To increase search speed",
+      "To prevent the random surfer from getting stuck at dangling nodes (pages with no outlinks) and in cyclic structures",
+      "To find hub pages",
+      "To compute anchor text weight"
     ],
     ans: 1,
-    exp: "Dangling node'lar (outlink'i olmayan sayfalar) surfer'ı tıkandırır. Teleport, surfer'ın her adımda α olasılıkla herhangi bir sayfaya ışınlanmasını sağlar; bu Markov zincirini ergodik kılar."
+    exp: "Dangling nodes (pages with no outlinks) trap the surfer. Teleport allows the surfer to jump to any page with probability α at each step, making the Markov chain ergodic."
   },
   {
-    q: "Markov zincirinin ergodik olması için hangi iki koşul gereklidir?",
+    q: "What two conditions are required for a Markov chain to be ergodic?",
     opts: [
-      "Simetri ve normallik",
-      "İndirgenemezlik ve aperiodiklik",
-      "Stokastiklik ve diyagonallik",
-      "Pozitiflik ve kompaktlık"
+      "Symmetry and normality",
+      "Irreducibility and aperiodicity",
+      "Stochasticity and diagonality",
+      "Positivity and compactness"
     ],
     ans: 1,
-    exp: "İndirgenemezlik: her durumdan her duruma ulaşılabilir. Aperiodiklik: durumlar periyodik kümelere bölünmez. Bu iki koşul sağlanınca benzersiz bir steady-state dağılımı vardır."
+    exp: "Irreducibility: every state is reachable from every other state. Aperiodicity: states do not split into periodic subsets. When both conditions hold, there is a unique steady-state distribution."
   },
   {
-    q: "Stokastik matrisin en büyük özdeğeri kaçtır?",
-    opts: ["0", "0.5", "1", "N (matris boyutu)"],
+    q: "What is the largest eigenvalue of a stochastic matrix?",
+    opts: ["0", "0.5", "1", "N (matrix dimension)"],
     ans: 2,
-    exp: "Stokastik matrislerin en büyük özdeğeri her zaman 1'dir. Bu, Perron-Frobenius teoreminin bir sonucudur. PageRank, bu özdeğere karşılık gelen principal left eigenvector'den elde edilir."
+    exp: "The largest eigenvalue of stochastic matrices is always 1. This is a consequence of the Perron-Frobenius theorem. PageRank is derived from the principal left eigenvector corresponding to this eigenvalue."
   },
   {
-    q: "Power iteration yönteminde hangi koşul karşılandığında algoritma durdurulur?",
+    q: "In the power iteration method, when is the algorithm stopped?",
     opts: [
-      "100 iterasyon tamamlandığında",
-      "Matris köşegen olduğunda",
-      "Ardışık iki iterasyon arasındaki değişim önceden belirlenen bir eşiğin altına indiğinde",
-      "Tüm PageRank değerleri eşit olduğunda"
+      "When 100 iterations are completed",
+      "When the matrix becomes diagonal",
+      "When the change between two successive iterations falls below a predetermined threshold",
+      "When all PageRank values become equal"
     ],
     ans: 2,
-    exp: "Power iteration, dağılım vektörü yakınsadığında — yani x̃ₜ ile x̃ₜ₊₁ arasındaki fark yeterince küçüldüğünde — durdurulur. Bu frekansların 'oturması' PageRank değerlerine ulaşıldığı anlamına gelir."
+    exp: "Power iteration is stopped when the distribution vector converges — i.e. when the difference between x̃ₜ and x̃ₜ₊₁ becomes sufficiently small. This 'settling' of frequencies means PageRank values have been reached."
   },
   {
-    q: "Topic-specific PageRank, standart PageRank'ten nasıl farklılaşır?",
+    q: "How does topic-specific PageRank differ from standard PageRank?",
     opts: [
-      "Daha az iterasyon gerektirir",
-      "Teleport işlemi tüm web'e değil, konuyla ilgili belirli bir sayfa kümesi S'e yapılır",
-      "Outlink yerine in-link sayısını kullanır",
-      "Matrisi transpoz ederek hesaplanır"
+      "It requires fewer iterations",
+      "The teleport operation goes to a specific set S of topic-relevant pages rather than the entire web",
+      "It uses in-link count instead of outlinks",
+      "It is computed by transposing the matrix"
     ],
     ans: 1,
-    exp: "Topic-specific PageRank'te teleport operasyonu yalnızca önceden belirlenmiş konu sayfaları kümesi S'e yapılır. Bu, o konuyla ilgili sayfaların steady-state olasılığını artırır."
+    exp: "In topic-specific PageRank, the teleport operation goes only to a predefined set S of topic pages. This raises the steady-state probability of pages related to that topic."
   },
   {
-    q: "Bir kullanıcının kişiselleştirilmiş PageRank vektörü nasıl hesaplanır?",
+    q: "How is a user's personalized PageRank vector computed?",
     opts: [
-      "Her kullanıcı için sıfırdan tam bir PageRank hesabı yapılır",
-      "Konu bazlı PageRank vektörlerinin kullanıcı ilgi oranlarıyla ağırlıklı doğrusal kombinasyonu alınır",
-      "Kullanıcının geçmiş aramalarına bakılarak en çok ziyaret edilen sayfaya PR verilir",
-      "Sadece kullanıcının bookmarkları dikkate alınır"
+      "A full PageRank computation is run from scratch for each user",
+      "A weighted linear combination of topic-based PageRank vectors is taken using the user's interest proportions",
+      "PR is assigned to the most visited page by looking at the user's search history",
+      "Only the user's bookmarks are considered"
     ],
     ans: 1,
-    exp: "Markov zincirinin doğrusal yapısı sayesinde, kişisel PageRank = Σ(wᵢ · π̃ᵢ) şeklinde hesaplanabilir; burada wᵢ kullanıcının konu i'ye olan ilgi oranıdır. Her konu için sadece bir kez hesaplama yeterlidir."
+    exp: "Thanks to the linear structure of Markov chains, personal PageRank = Σ(wᵢ · π̃ᵢ), where wᵢ is the user's interest proportion for topic i. One computation per topic is sufficient."
   },
   {
-    q: "HITS algoritmasında 'hub' sayfası nasıl tanımlanır?",
+    q: "How is a 'hub' page defined in the HITS algorithm?",
     opts: [
-      "Çok fazla in-link alan sayfa",
-      "Konuyla ilgili birçok authority sayfasına link veren sayfa",
-      "En yüksek PageRank değerine sahip sayfa",
-      "Kullanıcılar tarafından en çok ziyaret edilen sayfa"
+      "A page that receives many in-links",
+      "A page that links to many authority pages on the topic",
+      "The page with the highest PageRank value",
+      "The page most visited by users"
     ],
     ans: 1,
-    exp: "Hub'lar, iyi authority'lere yönlendiren sayfalardır — genellikle elle hazırlanmış kaynak listeleri gibi. İyi hub, birçok iyi authority'ye link verir."
+    exp: "Hubs are pages that point to good authorities — typically like manually compiled resource lists. A good hub links to many good authorities."
   },
   {
-    q: "HITS'te authority skoru nasıl güncellenir?",
+    q: "How is the authority score updated in HITS?",
     opts: [
-      "a(v) ← Σ a(y) için v→y tüm y'ler",
-      "a(v) ← Σ h(y) için y→v olan tüm y'ler",
+      "a(v) ← Σ a(y) for all y with v→y",
+      "a(v) ← Σ h(y) for all y with y→v",
       "a(v) ← h(v) / in-degree(v)",
       "a(v) ← out-degree(v) × h(v)"
     ],
     ans: 1,
-    exp: "Authority skoru, v'ye link veren (y→v) tüm sayfaların hub skorlarının toplamıdır. İyi hub'lar tarafından gösterilen sayfalar iyi authority olur."
+    exp: "The authority score is the sum of hub scores of all pages that link to v (y→v). Pages pointed to by good hubs become good authorities."
   },
   {
-    q: "HITS matris formülasyonunda hub vektörü hangi matrisin eigenvector'üdür?",
+    q: "In the HITS matrix formulation, of which matrix is the hub vector an eigenvector?",
     opts: ["A", "Aᵀ", "AAᵀ", "AᵀA"],
     ans: 2,
-    exp: "Hub güncelleme denklemi h⃗ ← A·a⃗ ve a⃗ ← Aᵀ·h⃗ birleştirilince h⃗ ← AAᵀ·h⃗ elde edilir. Yani hub vektörü AAᵀ'nin principal eigenvector'üdür."
+    exp: "Combining the hub update h⃗ ← A·a⃗ and a⃗ ← Aᵀ·h⃗ gives h⃗ ← AAᵀ·h⃗. So the hub vector is the principal eigenvector of AAᵀ."
   },
   {
-    q: "HITS'te kullanılan 'base set' nasıl oluşturulur?",
+    q: "How is the 'base set' used in HITS constructed?",
     opts: [
-      "Sadece text query ile eşleşen sayfalardan",
-      "Root set (text eşleşmeleri) + root set'e link veren sayfalar + root set'in link verdiği sayfalar",
-      "Tüm web sayfalarından rastgele örnekleme ile",
-      "Yalnızca en yüksek PageRank'li sayfalardan"
+      "Only from pages matching the text query",
+      "Root set (text matches) + pages linking to the root set + pages linked from the root set",
+      "By random sampling from all web pages",
+      "Only from pages with the highest PageRank"
     ],
     ans: 1,
-    exp: "Root set (~200 text eşleşmesi) core'dur. Base set, root set'e in-link ve out-link zinciriyle genişletilir. Bu, authority sayfalar sorgu terimini içermese bile yakalanmasını sağlar."
+    exp: "The root set (~200 text matches) is the core. The base set is expanded from the root set via in-link and out-link chains. This allows authority pages to be captured even if they don't contain the query term."
   },
   {
-    q: "Anchor text'in web aramasındaki önemi nedir?",
+    q: "What is the importance of anchor text in web search?",
     opts: [
-      "Sayfanın görsel tasarımını tanımlar",
-      "Hedef sayfanın, hedef sayfanın kendi içeriğinden daha iyi tanımlanmasını sağlayabilir",
-      "Yalnızca sayfa içi arama için kullanılır",
-      "Sayfanın son güncellenme tarihini gösterir"
+      "It defines the visual design of the page",
+      "It can describe the target page better than the target page's own content",
+      "It is used only for in-page search",
+      "It shows the last update date of the page"
     ],
     ans: 1,
-    exp: "IBM sitesinde 'computer' kelimesi yoktu ama IBM'e gelen linklerin anchor text'i bu kelimeyi içeriyordu. Anchor text, kullanıcıların bir sayfayı nasıl tarif ettiğini yansıtır — sayfa sahibinin tercihinden bağımsız."
+    exp: "The word 'computer' was absent from IBM's site, but anchor texts of links to IBM contained this word. Anchor text reflects how users describe a page — independent of the page owner's choices."
   },
   {
-    q: "PageRank'in 'sorgudan bağımsız' olmasının pratikte ne anlamı vardır?",
+    q: "What does it mean in practice for PageRank to be 'query-independent'?",
     opts: [
-      "PageRank yalnızca belirli sorgu türleri için hesaplanır",
-      "PageRank değerleri önceden hesaplanıp saklanır ve sorgu zamanında bir faktör olarak kullanılır",
-      "Tüm sorguların aynı sonuçları döndüreceği anlamına gelir",
-      "PageRank hesabı sorgu başına gerçek zamanlı yapılır"
+      "PageRank is computed only for specific query types",
+      "PageRank values are precomputed and stored, used as one factor at query time",
+      "It means all queries return the same results",
+      "PageRank computation is done in real time per query"
     ],
     ans: 1,
-    exp: "PageRank değerleri crawl zamanında hesaplanır ve saklanır. Sorgu geldiğinde TF-IDF, cosine similarity gibi diğer faktörlerle birleştirilerek kullanılır. Bu, hesaplama maliyetini sorgu zamanından indirger."
+    exp: "PageRank values are computed and stored at crawl time. When a query arrives, they are combined with other factors like TF-IDF and cosine similarity. This shifts the computational cost away from query time."
   },
   {
-    q: "Düğümünün hiç outlink'i yoksa (dangling node) PageRank hesabında ne yapılır?",
+    q: "What is done in PageRank computation if a node has no outlinks (dangling node)?",
     opts: [
-      "O düğüm hesaptan çıkarılır",
-      "O düğümün tüm satırı, tüm N sayfaya eşit dağılım (1/N) olarak değiştirilir",
-      "O düğümün PageRank skoru sıfır yapılır",
-      "O düğüm kendi kendine link veriyor gibi kabul edilir"
+      "That node is excluded from the computation",
+      "That node's entire row is replaced with a uniform distribution (1/N) over all N pages",
+      "That node's PageRank score is set to zero",
+      "That node is treated as if it links to itself"
     ],
     ans: 1,
-    exp: "Adjacency matrisinde outlink'i olmayan bir satır, transition probability matrix P oluşturulurken tüm elemanları 1/N olan bir satırla değiştirilir. Bu, surfer'ın bu düğümden her yere eşit olasılıkla teleport etmesi anlamına gelir."
+    exp: "In the adjacency matrix, a row with no outlinks is replaced with a row of all 1/N values when building the transition probability matrix P. This means the surfer teleports from that node to anywhere with equal probability."
   },
   {
-    q: "PageRank değeri en az kaç olabilir?",
+    q: "What is the minimum possible PageRank value?",
     opts: ["0", "α/N", "1/N", "α"],
     ans: 1,
-    exp: "Teleport operasyonu her zaman α/N olasılıkla herhangi bir sayfaya ışınlar. Bu yüzden hiçbir sayfanın PageRank değeri α/N'den düşük olamaz. α büyüdükçe sayfalar arası PageRank farkı azalır."
+    exp: "The teleport operation always jumps to any page with probability α/N. Therefore no page's PageRank can be lower than α/N. As α increases, the PageRank difference between pages decreases."
   },
   {
-    q: "HITS algoritmasında 'topic drift' problemi nedir?",
+    q: "What is the 'topic drift' problem in the HITS algorithm?",
     opts: [
-      "PageRank değerlerinin zamanla değişmesi",
-      "Base set'in asıl sorgudan uzak, alakasız konulara kayması",
-      "Authority ve hub skorlarının yakınsamayı reddetmesi",
-      "Sorgunun yanlış dilde işlenmesi"
+      "PageRank values changing over time",
+      "The base set drifting toward irrelevant topics far from the original query",
+      "Authority and hub scores failing to converge",
+      "The query being processed in the wrong language"
     ],
     ans: 1,
-    exp: "Base set genişletilirken ilgisiz konulardaki sayfalar da dahil olabilir. Bu sayfalar kendi aralarında güçlü link yapısı oluşturunca hub/authority hesaplaması orijinal konudan uzaklaşabilir — topic drift."
+    exp: "When expanding the base set, pages on unrelated topics can be included. When these pages form a strong link structure among themselves, the hub/authority computation can drift away from the original topic — topic drift."
   },
   {
-    q: "N × N geçiş matrisinin bir satırı için ne garanti edilir?",
+    q: "What is guaranteed for a row of an N × N transition matrix?",
     opts: [
-      "Tüm elemanlar sıfır veya bir tam sayıdır",
-      "Satır toplamı 1'dir ve tüm elemanlar [0,1] aralığındadır",
-      "Köşegen elemanı en büyük değere sahiptir",
-      "Sütun toplamı 1'dir"
+      "All elements are zero or a positive integer",
+      "The row sums to 1 and all elements are in [0,1]",
+      "The diagonal element has the largest value",
+      "The column sums to 1"
     ],
     ans: 1,
-    exp: "Stokastik matrisin tanımı: tüm elemanlar [0,1] aralığında ve her satır toplamı tam olarak 1'dir. Bu, olasılık dağılımı koşulundan gelir — bir durumdan sonraki durumlara geçiş olasılıkları toplamı 1 olmalıdır."
+    exp: "By definition of a stochastic matrix: all elements are in [0,1] and each row sums to exactly 1. This comes from the probability distribution requirement — transition probabilities from a state to all next states must sum to 1."
   },
   {
-    q: "Link spam neden sadece in-link sayısını saymakla önlenemez?",
+    q: "Why can link spam not be prevented simply by counting in-links?",
     opts: [
-      "In-link sayımı çok hesaplı maliyetlidir",
-      "Saldırgan, hedef sayfaya işaret eden çok sayıda yapay sayfa oluşturabilir ve in-link sayısını yapay olarak şişirebilir",
-      "In-link sayısı hiçbir zaman kalite göstergesi değildir",
-      "In-linkler yalnızca kendi domain içinden sayılabilir"
+      "In-link counting is too computationally expensive",
+      "An attacker can create many fake pages pointing to the target page, artificially inflating the in-link count",
+      "In-link count is never a quality indicator",
+      "In-links can only be counted from within the same domain"
     ],
     ans: 1,
-    exp: "Basit in-link sayımına karşı saldırgan kolayca çok sayıda sahte sayfa oluşturup hedef sayfaya bağlatabilir (link farm). PageRank bu sorunu kısmen çözer çünkü bir link'in değeri, link veren sayfanın kendi PageRank'ine bağlıdır."
+    exp: "Against simple in-link counting, an attacker can easily create many fake pages linking to the target (link farm). PageRank partially solves this because a link's value depends on the PageRank of the linking page."
   },
   {
-    q: "HITS'te tüm hub ve authority skorları 1 ile başlatılırsa, bir iterasyon sonunda in-degree 4 olan bir düğümün authority skoru ne olur?",
+    q: "In HITS, if all hub and authority scores are initialized to 1, what is the authority score of a node with in-degree 4 after one iteration?",
     opts: ["1", "2", "4", "8"],
     ans: 2,
-    exp: "a(v) ← Σ h(y) — v'ye link veren tüm y'lerin hub skorları toplamı. Başlangıçta tüm h(y) = 1, in-degree = 4 olduğundan a(v) = 1+1+1+1 = 4."
+    exp: "a(v) ← Σ h(y) — sum of hub scores of all y linking to v. Initially all h(y) = 1, in-degree = 4, so a(v) = 1+1+1+1 = 4."
   },
   {
-    q: "PageRank ve HITS arasındaki en temel mimari fark hangisidir?",
+    q: "What is the most fundamental architectural difference between PageRank and HITS?",
     opts: [
-      "PageRank Python'da, HITS Java'da uygulanır",
-      "PageRank tüm web için sorgu bağımsız önceden hesaplanır; HITS her sorguda belirlenen alt küme üzerinde çalışır",
-      "PageRank yönlü, HITS yönsüz graflar kullanır",
-      "PageRank tek skor, HITS üç ayrı skor üretir"
+      "PageRank is implemented in Python, HITS in Java",
+      "PageRank is precomputed query-independently for the entire web; HITS runs on a query-specific subset at each query",
+      "PageRank uses directed graphs, HITS uses undirected graphs",
+      "PageRank produces one score, HITS produces three separate scores"
     ],
     ans: 1,
-    exp: "PageRank'in sorgudan bağımsız olması pratik büyük avantajdır — indeksleme sırasında hesaplanır. HITS her sorguda base set oluşturup eigenvector hesaplaması yaptığından gerçek zamanlı kullanımı daha maliyetlidir."
+    exp: "PageRank's query independence is a major practical advantage — it is computed during indexing. HITS builds a base set and computes eigenvectors at each query, making real-time use more costly."
   }
 ];
 
@@ -710,7 +710,7 @@ function buildQuiz() {
     const card = document.createElement('div');
     card.className = 'q-card';
     card.innerHTML = `
-      <div class="q-num">Soru ${qi + 1} / ${TOTAL}</div>
+      <div class="q-num">Question ${qi + 1} / ${TOTAL}</div>
       <div class="q-text">${q.q}</div>
       <div class="options">
         ${q.opts.map((o, oi) => `<button class="option" onclick="answer(${qi},${oi})">${o}</button>`).join('')}
