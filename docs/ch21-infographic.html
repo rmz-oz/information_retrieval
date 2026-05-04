@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CSE 422 — Ch21 Infographics</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--fg:#1a1a1a;--fg2:#444;--fg3:#666;
+  --border:rgba(0,0,0,0.12);--accent:#6366f1;
+  --card:#f8f8f8;--code:#f3f3f3;
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#111;--fg:#e8e8e8;--fg2:#bbb;--fg3:#888;
+  --border:rgba(255,255,255,0.1);--card:#1a1a1a;--code:#222;}
+}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.7;}
+a{color:var(--accent);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.site-header{border-bottom:1px solid var(--border);padding:.75rem 1.5rem;font-size:.85rem;color:var(--fg3);}
+.site-header a{color:var(--fg3);}
+main{max-width:900px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+h1{font-size:1.8rem;font-weight:700;margin-bottom:.25rem;}
+.byline{color:var(--fg3);font-size:.85rem;margin-bottom:2rem;}
+.section{margin:3rem 0;}
+.section-label{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:var(--accent);color:#fff;margin-bottom:.6rem;}
+.section h2{font-size:1.15rem;font-weight:700;margin-bottom:.3rem;border-top:2px solid var(--accent);padding-top:.5rem;}
+.section p.desc{font-size:.86rem;color:var(--fg3);margin-bottom:1.2rem;line-height:1.6;}
+.vis-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:.5rem;}
+.vis-wrap svg{display:block;min-width:600px;}
+hr.divider{border:none;border-top:1px solid var(--border);margin:3rem 0;}
+
+/* SVG theming */
+svg .t{font-family:system-ui,-apple-system,sans-serif;font-size:14px;fill:var(--fg);}
+svg .ts{font-family:system-ui,-apple-system,sans-serif;font-size:12px;fill:var(--fg2);}
+svg .th{font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:500;fill:var(--fg);}
+svg .box{fill:var(--card);stroke:var(--border);stroke-width:.5px;}
+svg .arr{stroke:var(--fg3);stroke-width:1.5px;fill:none;}
+svg .leader{stroke:var(--fg3);stroke-width:.5px;stroke-dasharray:3 2;fill:none;}
+svg .node{cursor:pointer;}
+svg .node:hover{opacity:.82;}
+
+/* Color ramps — light */
+svg .c-purple > rect, svg .c-purple > circle, svg .c-purple > ellipse{fill:#EEEDFE;stroke:#534AB7;} svg .c-purple > text.th{fill:#26215C;} svg .c-purple > text.ts{fill:#3C3489;}
+svg .c-teal   > rect, svg .c-teal   > circle, svg .c-teal   > ellipse{fill:#E1F5EE;stroke:#1D9E75;} svg .c-teal   > text.th{fill:#085041;} svg .c-teal   > text.ts{fill:#0F6E56;}
+svg .c-coral  > rect, svg .c-coral  > circle, svg .c-coral  > ellipse{fill:#FAECE7;stroke:#D85A30;} svg .c-coral  > text.th{fill:#4A1B0C;} svg .c-coral  > text.ts{fill:#712B13;}
+svg .c-amber  > rect, svg .c-amber  > circle, svg .c-amber  > ellipse{fill:#FAEEDA;stroke:#BA7517;} svg .c-amber  > text.th{fill:#412402;} svg .c-amber  > text.ts{fill:#633806;}
+svg .c-gray   > rect, svg .c-gray   > circle, svg .c-gray   > ellipse{fill:#F1EFE8;stroke:#888780;} svg .c-gray   > text.th{fill:#2C2C2A;} svg .c-gray   > text.ts{fill:#5F5E5A;}
+svg .c-blue   > rect, svg .c-blue   > circle, svg .c-blue   > ellipse{fill:#E6F1FB;stroke:#185FA5;} svg .c-blue   > text.th{fill:#042C53;} svg .c-blue   > text.ts{fill:#0C447C;}
+svg .c-green  > rect, svg .c-green  > circle, svg .c-green  > ellipse{fill:#EAF3DE;stroke:#3B6D11;} svg .c-green  > text.th{fill:#173404;} svg .c-green  > text.ts{fill:#27500A;}
+svg .c-red    > rect, svg .c-red    > circle, svg .c-red    > ellipse{fill:#FCEBEB;stroke:#A32D2D;} svg .c-red    > text.th{fill:#501313;} svg .c-red    > text.ts{fill:#791F1F;}
+
+/* Color ramps — dark */
+@media(prefers-color-scheme:dark){
+svg .c-purple > rect, svg .c-purple > circle, svg .c-purple > ellipse{fill:#3C3489;stroke:#CECBF6;} svg .c-purple > text.th{fill:#EEEDFE;} svg .c-purple > text.ts{fill:#AFA9EC;}
+svg .c-teal   > rect, svg .c-teal   > circle, svg .c-teal   > ellipse{fill:#085041;stroke:#9FE1CB;} svg .c-teal   > text.th{fill:#E1F5EE;} svg .c-teal   > text.ts{fill:#5DCAA5;}
+svg .c-coral  > rect, svg .c-coral  > circle, svg .c-coral  > ellipse{fill:#712B13;stroke:#F5C4B3;} svg .c-coral  > text.th{fill:#FAECE7;} svg .c-coral  > text.ts{fill:#F0997B;}
+svg .c-amber  > rect, svg .c-amber  > circle, svg .c-amber  > ellipse{fill:#633806;stroke:#FAC775;} svg .c-amber  > text.th{fill:#FAEEDA;} svg .c-amber  > text.ts{fill:#EF9F27;}
+svg .c-gray   > rect, svg .c-gray   > circle, svg .c-gray   > ellipse{fill:#444441;stroke:#D3D1C7;} svg .c-gray   > text.th{fill:#F1EFE8;} svg .c-gray   > text.ts{fill:#B4B2A9;}
+svg .c-blue   > rect, svg .c-blue   > circle, svg .c-blue   > ellipse{fill:#0C447C;stroke:#B5D4F4;} svg .c-blue   > text.th{fill:#E6F1FB;} svg .c-blue   > text.ts{fill:#85B7EB;}
+svg .c-green  > rect, svg .c-green  > circle, svg .c-green  > ellipse{fill:#27500A;stroke:#C0DD97;} svg .c-green  > text.th{fill:#EAF3DE;} svg .c-green  > text.ts{fill:#97C459;}
+svg .c-red    > rect, svg .c-red    > circle, svg .c-red    > ellipse{fill:#791F1F;stroke:#F7C1C1;} svg .c-red    > text.th{fill:#FCEBEB;} svg .c-red    > text.ts{fill:#F09595;}
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a href="https://rmz-oz.github.io/information_retrieval/index.html">← Home</a>
+  &nbsp;/&nbsp;
+  <a href="ch21.html">Ch21 Lesson</a>
+</header>
+<main>
+  <h1>Chapter 21 — Visual Companion</h1>
+  <p class="byline">CSE 422 Information Retrieval · Infographics &amp; Diagrams</p>
+
+  <!-- ═══════════════════════════════════════════════════════
+       1. PRE-PAGERANK ERA
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 1</span>
+    <h2>The Era Before PageRank (1990–1998)</h2>
+    <p class="desc">How early search engines worked — and why they all failed at the same fundamental problem.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 720 305" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Timeline of search engines 1990–1998">
+<title>Search engine timeline 1990–1998</title><desc>From Archie to Google, showing the evolution from manual directories to full-text indexing to link analysis.</desc>
+<defs><marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<line x1="50" y1="178" x2="680" y2="178" stroke="currentColor" stroke-width="1.2" opacity="0.22"/>
+<polygon points="678,174 686,178 678,182" fill="currentColor" opacity="0.22"/>
+<g opacity="0.38" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" fill="currentColor">
+  <line x1="50" y1="173" x2="50" y2="183" stroke="currentColor" stroke-width="1"/>
+  <line x1="178" y1="173" x2="178" y2="183" stroke="currentColor" stroke-width="1"/>
+  <line x1="306" y1="173" x2="306" y2="183" stroke="currentColor" stroke-width="1"/>
+  <line x1="434" y1="173" x2="434" y2="183" stroke="currentColor" stroke-width="1"/>
+  <line x1="562" y1="173" x2="562" y2="183" stroke="currentColor" stroke-width="1"/>
+  <text x="50" y="197">1990</text><text x="178" y="197">1992</text><text x="306" y="197">1994</text><text x="434" y="197">1996</text><text x="562" y="197">1998</text>
+</g>
+<!-- Archie -->
+<circle cx="50" cy="178" r="5" fill="#1D9E75"/>
+<line x1="50" y1="173" x2="50" y2="133" stroke="#1D9E75" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-teal"><rect x="8" y="96" width="84" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="50" y="111" text-anchor="middle" dominant-baseline="central">Archie</text>
+<text class="ts" x="50" y="124" text-anchor="middle" dominant-baseline="central">FTP index</text></g>
+<!-- Gopher -->
+<circle cx="114" cy="178" r="5" fill="#888780"/>
+<line x1="114" y1="183" x2="114" y2="223" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-gray"><rect x="68" y="223" width="92" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="114" y="238" text-anchor="middle" dominant-baseline="central">Gopher</text>
+<text class="ts" x="114" y="251" text-anchor="middle" dominant-baseline="central">Menu traversal</text></g>
+<!-- ALIWEB -->
+<circle cx="242" cy="178" r="5" fill="#888780"/>
+<line x1="242" y1="173" x2="242" y2="133" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-gray"><rect x="196" y="96" width="92" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="242" y="111" text-anchor="middle" dominant-baseline="central">ALIWEB</text>
+<text class="ts" x="242" y="124" text-anchor="middle" dominant-baseline="central">Self-submitted</text></g>
+<!-- Yahoo -->
+<circle cx="306" cy="178" r="6" fill="#D85A30"/>
+<line x1="306" y1="184" x2="306" y2="224" stroke="#D85A30" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-coral"><rect x="254" y="224" width="104" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="306" y="239" text-anchor="middle" dominant-baseline="central">Yahoo</text>
+<text class="ts" x="306" y="252" text-anchor="middle" dominant-baseline="central">Manual directory</text></g>
+<!-- WebCrawler -->
+<circle cx="338" cy="178" r="5" fill="#534AB7"/>
+<line x1="338" y1="173" x2="338" y2="113" stroke="#534AB7" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-purple"><rect x="284" y="76" width="108" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="338" y="91" text-anchor="middle" dominant-baseline="central">WebCrawler</text>
+<text class="ts" x="338" y="104" text-anchor="middle" dominant-baseline="central">Full-text crawl</text></g>
+<!-- Lycos -->
+<circle cx="378" cy="178" r="5" fill="#534AB7"/>
+<line x1="378" y1="173" x2="378" y2="55" stroke="#534AB7" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-purple"><rect x="328" y="18" width="100" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="378" y="33" text-anchor="middle" dominant-baseline="central">Lycos</text>
+<text class="ts" x="378" y="46" text-anchor="middle" dominant-baseline="central">Title + summary</text></g>
+<!-- AltaVista -->
+<circle cx="434" cy="178" r="7" fill="#D85A30"/>
+<line x1="434" y1="185" x2="434" y2="225" stroke="#D85A30" stroke-width="1" stroke-dasharray="3 2"/>
+<g class="c-coral"><rect x="374" y="225" width="120" height="34" rx="6" stroke-width="1"/>
+<text class="th" x="434" y="240" text-anchor="middle" dominant-baseline="central">AltaVista</text>
+<text class="ts" x="434" y="253" text-anchor="middle" dominant-baseline="central">Full-text index</text></g>
+<!-- Excite -->
+<circle cx="466" cy="178" r="5" fill="#534AB7"/>
+<line x1="466" y1="173" x2="466" y2="133" stroke="#534AB7" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-purple"><rect x="412" y="96" width="108" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="466" y="111" text-anchor="middle" dominant-baseline="central">Excite</text>
+<text class="ts" x="466" y="124" text-anchor="middle" dominant-baseline="central">Concept clusters</text></g>
+<!-- HotBot -->
+<circle cx="510" cy="178" r="5" fill="#888780"/>
+<line x1="510" y1="183" x2="510" y2="223" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 2"/>
+<g class="c-gray"><rect x="460" y="223" width="100" height="34" rx="6" stroke-width="0.8"/>
+<text class="th" x="510" y="238" text-anchor="middle" dominant-baseline="central">HotBot</text>
+<text class="ts" x="510" y="251" text-anchor="middle" dominant-baseline="central">Inktomi index</text></g>
+<!-- Google -->
+<circle cx="610" cy="178" r="9" fill="#BA7517"/>
+<line x1="610" y1="169" x2="610" y2="129" stroke="#BA7517" stroke-width="1.2" stroke-dasharray="3 2"/>
+<g class="c-amber"><rect x="546" y="92" width="128" height="34" rx="6" stroke-width="1"/>
+<text class="th" x="610" y="107" text-anchor="middle" dominant-baseline="central">Google / PageRank</text>
+<text class="ts" x="610" y="120" text-anchor="middle" dominant-baseline="central">Link analysis!</text></g>
+<!-- Legend -->
+<g font-size="10" opacity="0.6" font-family="system-ui,sans-serif" fill="currentColor">
+  <rect x="50" y="278" width="10" height="10" rx="2" fill="#D85A30"/><text x="65" y="287">Directory / major text engine</text>
+  <rect x="240" y="278" width="10" height="10" rx="2" fill="#534AB7"/><text x="255" y="287">Text-matching crawler</text>
+  <rect x="410" y="278" width="10" height="10" rx="2" fill="#BA7517"/><text x="425" y="287">Breakthrough: link analysis</text>
+</g>
+</svg>
+    </div>
+
+    <!-- Three problems -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin-top:1rem;">
+      <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;background:var(--card);">
+        <span style="display:inline-block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:20px;background:#fde8e8;color:#b91c1c;margin-bottom:.5rem;">Problem 1</span>
+        <h4 style="font-size:.92rem;margin-bottom:.35rem;">Keyword stuffing</h4>
+        <div style="background:#fff8f8;border:1px solid #fca5a5;border-radius:5px;padding:.4rem .7rem;font-size:.7rem;font-family:monospace;color:#991b1b;margin:.45rem 0;line-height:1.6;">cheap flights cheap flights<br>cheap flights cheap flights<br>cheap flights cheap flights</div>
+        <p style="font-size:.81rem;color:var(--fg2);margin:0;">Score = keyword count. Quality invisible to the engine.</p>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;background:var(--card);">
+        <span style="display:inline-block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:20px;background:#fde8e0;color:#9a3412;margin-bottom:.5rem;">Problem 2</span>
+        <h4 style="font-size:.92rem;margin-bottom:.35rem;">No quality signal</h4>
+        <p style="font-size:.81rem;color:var(--fg2);margin:0;">Trusted gov page and spam page saying same words = <em>identical score</em>. Engines couldn't distinguish reputation from repetition.</p>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;background:var(--card);">
+        <span style="display:inline-block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;margin-bottom:.5rem;">Problem 3</span>
+        <h4 style="font-size:.92rem;margin-bottom:.35rem;">Spam arms race</h4>
+        <p style="font-size:.81rem;color:var(--fg2);margin:0;">Engine penalises density → spammer hides text → engine detects → spammer cloaks → repeat. No stable equilibrium.</p>
+      </div>
+    </div>
+    <div style="border-left:3px solid var(--accent);background:rgba(99,102,241,.06);border-radius:0 8px 8px 0;padding:.9rem 1.2rem;font-size:.86rem;margin-top:1rem;line-height:1.65;color:var(--fg2);">
+      <strong style="color:var(--accent);">The fundamental flaw:</strong> All pre-PageRank engines judged pages only by what they <em>said about themselves</em>.<br>
+      <strong style="color:var(--accent);">PageRank's breakthrough (1998):</strong> Ask what <em>other pages</em> say — a hyperlink A→B is an endorsement, like an academic citation.
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       2. ANCHOR TEXT
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slides 2–3</span>
+    <h2>Anchor Text &amp; The Web as a Graph</h2>
+    <p class="desc">The clickable text of a hyperlink often describes the target page better than the target page's own content — the IBM example.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anchor text IBM example diagram">
+<title>Anchor text power — IBM example</title><desc>External pages link to ibm.com with anchor text containing 'computer', while IBM's own page does not. Internal template links are discounted.</desc>
+<defs><marker id="a2g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a2r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- IBM target -->
+<g class="node c-blue"><rect x="240" y="160" width="200" height="80" rx="10" stroke-width="1"/>
+<text class="th" x="340" y="188" text-anchor="middle" dominant-baseline="central">ibm.com</text>
+<text class="ts" x="340" y="208" text-anchor="middle" dominant-baseline="central">"Solutions. Services.</text>
+<text class="ts" x="340" y="224" text-anchor="middle" dominant-baseline="central">Innovation. IBM."</text></g>
+<rect x="240" y="252" width="200" height="26" rx="5" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+<text class="ts" x="340" y="268" text-anchor="middle" style="fill:#A32D2D">no word "computer" in page text</text>
+<!-- External linkers -->
+<g class="node c-teal"><rect x="30" y="60" width="148" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="104" y="78" text-anchor="middle" dominant-baseline="central">techcrunch.com</text>
+<text class="ts" x="104" y="94" text-anchor="middle" dominant-baseline="central">tech news site</text></g>
+<rect x="56" y="118" width="96" height="22" rx="11" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="104" y="133" text-anchor="middle" style="fill:#085041">"IBM computers"</text>
+<line x1="152" y1="129" x2="238" y2="195" stroke="#1D9E75" stroke-width="1.8" marker-end="url(#a2g)" fill="none"/>
+<g class="node c-teal"><rect x="30" y="188" width="148" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="104" y="206" text-anchor="middle" dominant-baseline="central">wikipedia.org</text>
+<text class="ts" x="104" y="222" text-anchor="middle" dominant-baseline="central">reference article</text></g>
+<rect x="42" y="246" width="120" height="22" rx="11" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="102" y="261" text-anchor="middle" style="fill:#085041">"computer company"</text>
+<line x1="162" y1="257" x2="238" y2="218" stroke="#1D9E75" stroke-width="1.8" marker-end="url(#a2g)" fill="none"/>
+<g class="node c-teal"><rect x="30" y="316" width="148" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="104" y="334" text-anchor="middle" dominant-baseline="central">reddit.com/r/tech</text>
+<text class="ts" x="104" y="350" text-anchor="middle" dominant-baseline="central">community forum</text></g>
+<rect x="30" y="374" width="148" height="22" rx="11" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="104" y="389" text-anchor="middle" style="fill:#085041">"best computer brand"</text>
+<line x1="152" y1="338" x2="238" y2="228" stroke="#1D9E75" stroke-width="1.2" marker-end="url(#a2g)" fill="none"/>
+<!-- Internal links (discounted) -->
+<g class="node c-gray"><rect x="502" y="60" width="148" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="576" y="78" text-anchor="middle" dominant-baseline="central">ibm.com/products</text>
+<text class="ts" x="576" y="94" text-anchor="middle" dominant-baseline="central">internal page</text></g>
+<g class="node c-gray"><rect x="502" y="188" width="148" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="576" y="206" text-anchor="middle" dominant-baseline="central">ibm.com/careers</text>
+<text class="ts" x="576" y="222" text-anchor="middle" dominant-baseline="central">internal page</text></g>
+<g class="node c-gray"><rect x="502" y="316" width="148" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="576" y="334" text-anchor="middle" dominant-baseline="central">ibm.com/support</text>
+<text class="ts" x="576" y="350" text-anchor="middle" dominant-baseline="central">internal page</text></g>
+<rect x="490" y="374" width="170" height="22" rx="5" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+<text class="ts" x="575" y="389" text-anchor="middle" style="fill:#444441">© Copyright IBM — footer link</text>
+<line x1="502" y1="82" x2="442" y2="190" stroke="#E24B4A" stroke-width="0.8" stroke-dasharray="5 3" marker-end="url(#a2r)" fill="none"/>
+<line x1="502" y1="210" x2="442" y2="210" stroke="#E24B4A" stroke-width="0.8" stroke-dasharray="5 3" marker-end="url(#a2r)" fill="none"/>
+<line x1="502" y1="330" x2="442" y2="225" stroke="#E24B4A" stroke-width="0.8" stroke-dasharray="5 3" marker-end="url(#a2r)" fill="none"/>
+<rect x="452" y="138" width="88" height="22" rx="5" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+<text class="ts" x="496" y="153" text-anchor="middle" style="fill:#A32D2D">discounted</text>
+<!-- Search index result -->
+<g class="node c-amber"><rect x="240" y="310" width="200" height="56" rx="10" stroke-width="0.8"/>
+<text class="th" x="340" y="330" text-anchor="middle" dominant-baseline="central">Search index entry</text>
+<text class="ts" x="340" y="350" text-anchor="middle" dominant-baseline="central">ibm.com → "computer"</text>
+<text class="ts" x="340" y="364" text-anchor="middle" dominant-baseline="central">via anchor text</text></g>
+<line x1="340" y1="280" x2="340" y2="308" stroke="#BA7517" stroke-width="1" fill="none" marker-end="url(#a2g)"/>
+<!-- Legend -->
+<line x1="240" y1="415" x2="272" y2="415" stroke="#1D9E75" stroke-width="2"/>
+<text class="ts" x="278" y="419" style="fill:#085041">genuine endorsement (counted)</text>
+<line x1="430" y1="415" x2="462" y2="415" stroke="#E24B4A" stroke-width="1.2" stroke-dasharray="5 3"/>
+<text class="ts" x="468" y="419" style="fill:#A32D2D">template link (discounted)</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       3. CITATION vs HYPERLINK
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 17</span>
+    <h2>Citation Analysis &amp; Bibliometrics</h2>
+    <p class="desc">Link analysis has intellectual roots in academic citation analysis. The same endorsement logic that measures journal authority applies directly to web pages.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Citation analysis vs hyperlink analysis parallel">
+<title>Academic citations vs web hyperlinks — same endorsement logic</title><desc>Side-by-side showing papers citing a central paper on the left, and web pages linking to a central page on the right, with identical logic.</desc>
+<defs>
+<marker id="a3s" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a3m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a3w" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9FE1CB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a3ps" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#7F77DD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a3pm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#AFA9EC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a3pw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#CECBF6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<!-- LEFT: Academic -->
+<g class="c-teal"><rect x="30" y="46" width="270" height="36" rx="8" stroke-width="0.5"/>
+<text class="th" x="165" y="64" text-anchor="middle" dominant-baseline="central">Academic world</text></g>
+<g class="node c-teal"><rect x="50" y="100" width="140" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="120" y="120" text-anchor="middle" dominant-baseline="central">Paper A</text>
+<text class="ts" x="120" y="138" text-anchor="middle" dominant-baseline="central">Influential journal</text></g>
+<g class="node c-teal"><rect x="50" y="210" width="140" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="120" y="230" text-anchor="middle" dominant-baseline="central">Paper B</text>
+<text class="ts" x="120" y="248" text-anchor="middle" dominant-baseline="central">Cites Paper C</text></g>
+<g class="node c-teal"><rect x="120" y="320" width="160" height="56" rx="8" stroke-width="1"/>
+<text class="th" x="200" y="340" text-anchor="middle" dominant-baseline="central">Paper C</text>
+<text class="ts" x="200" y="358" text-anchor="middle" dominant-baseline="central">High citation count</text></g>
+<line x1="120" y1="156" x2="180" y2="318" stroke="#1D9E75" stroke-width="3.5" marker-end="url(#a3s)" fill="none"/>
+<line x1="120" y1="266" x2="185" y2="318" stroke="#1D9E75" stroke-width="2.2" marker-end="url(#a3m)" fill="none"/>
+<g class="c-teal"><rect x="120" y="400" width="160" height="36" rx="20" stroke-width="0.5"/>
+<text class="th" x="200" y="418" text-anchor="middle" dominant-baseline="central">= Authoritative paper</text></g>
+<line x1="200" y1="376" x2="200" y2="398" stroke="#1D9E75" stroke-width="1" fill="none" marker-end="url(#a3s)"/>
+<!-- CENTER divider -->
+<rect x="308" y="80" width="64" height="320" rx="10" fill="none" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+<text class="ts" x="340" y="168" text-anchor="middle" style="fill:#888780">S</text>
+<text class="ts" x="340" y="183" text-anchor="middle" style="fill:#888780">A</text>
+<text class="ts" x="340" y="198" text-anchor="middle" style="fill:#888780">M</text>
+<text class="ts" x="340" y="213" text-anchor="middle" style="fill:#888780">E</text>
+<text class="ts" x="340" y="238" text-anchor="middle" style="fill:#888780">L</text>
+<text class="ts" x="340" y="253" text-anchor="middle" style="fill:#888780">O</text>
+<text class="ts" x="340" y="268" text-anchor="middle" style="fill:#888780">G</text>
+<text class="ts" x="340" y="283" text-anchor="middle" style="fill:#888780">I</text>
+<text class="ts" x="340" y="298" text-anchor="middle" style="fill:#888780">C</text>
+<g class="c-gray"><rect x="296" y="30" width="88" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="340" y="49" text-anchor="middle" dominant-baseline="central">Endorsement</text>
+<text class="ts" x="340" y="65" text-anchor="middle" dominant-baseline="central">= quality signal</text></g>
+<g class="c-amber"><rect x="288" y="390" width="104" height="52" rx="8" stroke-width="0.5"/>
+<text class="th" x="340" y="410" text-anchor="middle" dominant-baseline="central">Score ∝</text>
+<text class="ts" x="340" y="428" text-anchor="middle" dominant-baseline="central">endorser quality</text></g>
+<!-- RIGHT: Web -->
+<g class="c-purple"><rect x="380" y="46" width="270" height="36" rx="8" stroke-width="0.5"/>
+<text class="th" x="515" y="64" text-anchor="middle" dominant-baseline="central">Web world</text></g>
+<g class="node c-purple"><rect x="490" y="100" width="140" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="560" y="120" text-anchor="middle" dominant-baseline="central">Page A</text>
+<text class="ts" x="560" y="138" text-anchor="middle" dominant-baseline="central">High PageRank</text></g>
+<g class="node c-purple"><rect x="490" y="210" width="140" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="560" y="230" text-anchor="middle" dominant-baseline="central">Page B</text>
+<text class="ts" x="560" y="248" text-anchor="middle" dominant-baseline="central">Links to Page C</text></g>
+<g class="node c-purple"><rect x="400" y="320" width="160" height="56" rx="8" stroke-width="1"/>
+<text class="th" x="480" y="340" text-anchor="middle" dominant-baseline="central">Page C</text>
+<text class="ts" x="480" y="358" text-anchor="middle" dominant-baseline="central">Many inbound links</text></g>
+<line x1="560" y1="156" x2="500" y2="318" stroke="#7F77DD" stroke-width="3.5" marker-end="url(#a3ps)" fill="none"/>
+<line x1="560" y1="266" x2="495" y2="318" stroke="#7F77DD" stroke-width="2.2" marker-end="url(#a3pm)" fill="none"/>
+<g class="c-purple"><rect x="400" y="400" width="160" height="36" rx="20" stroke-width="0.5"/>
+<text class="th" x="480" y="418" text-anchor="middle" dominant-baseline="central">= High PageRank</text></g>
+<line x1="480" y1="376" x2="480" y2="398" stroke="#7F77DD" stroke-width="1" fill="none" marker-end="url(#a3ps)"/>
+<text class="ts" x="340" y="462" text-anchor="middle" style="fill:#888780">Pinski &amp; Narin (1976) formulated this for journals — 20 years before PageRank</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       4. PAGERANK RANDOM SURFER
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 4</span>
+    <h2>PageRank — The Core Idea</h2>
+    <p class="desc">A random surfer clicks links at random forever. Pages visited more often have higher PageRank. Score = steady-state visit probability π(v).</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PageRank random surfer model">
+<title>PageRank random surfer</title><desc>Four pages with directed links. Page A has highest PageRank as it receives links from multiple pages. Page D is a dangling node that teleports.</desc>
+<defs><marker id="a4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="node c-purple"><rect x="260" y="30" width="160" height="60" rx="10" stroke-width="1.2"/>
+<text class="th" x="340" y="52" text-anchor="middle" dominant-baseline="central">Page A</text>
+<text class="ts" x="340" y="72" text-anchor="middle" dominant-baseline="central">PR = 0.40 ★★★★</text></g>
+<g class="node c-purple"><rect x="60" y="180" width="150" height="60" rx="10" stroke-width="0.8"/>
+<text class="th" x="135" y="202" text-anchor="middle" dominant-baseline="central">Page B</text>
+<text class="ts" x="135" y="220" text-anchor="middle" dominant-baseline="central">PR = 0.25 ★★★</text></g>
+<g class="node c-purple"><rect x="470" y="180" width="150" height="60" rx="10" stroke-width="0.8"/>
+<text class="th" x="545" y="202" text-anchor="middle" dominant-baseline="central">Page C</text>
+<text class="ts" x="545" y="220" text-anchor="middle" dominant-baseline="central">PR = 0.20 ★★</text></g>
+<g class="node c-gray"><rect x="260" y="300" width="160" height="60" rx="10" stroke-width="0.5"/>
+<text class="th" x="340" y="322" text-anchor="middle" dominant-baseline="central">Page D</text>
+<text class="ts" x="340" y="340" text-anchor="middle" dominant-baseline="central">PR = 0.15 ★ dangling</text></g>
+<line x1="280" y1="78" x2="175" y2="180" stroke="#7F77DD" stroke-width="2" marker-end="url(#a4)" fill="none"/>
+<line x1="400" y1="78" x2="490" y2="180" stroke="#7F77DD" stroke-width="2" marker-end="url(#a4)" fill="none"/>
+<line x1="165" y1="180" x2="295" y2="90" stroke="#AFA9EC" stroke-width="1.4" marker-end="url(#a4)" fill="none"/>
+<line x1="505" y1="180" x2="410" y2="90" stroke="#AFA9EC" stroke-width="1.4" marker-end="url(#a4)" fill="none"/>
+<line x1="175" y1="240" x2="280" y2="310" stroke="#AFA9EC" stroke-width="1" marker-end="url(#a4)" fill="none"/>
+<line x1="505" y1="240" x2="420" y2="310" stroke="#AFA9EC" stroke-width="1" marker-end="url(#a4)" fill="none"/>
+<path d="M340 360 Q340 395 200 385 Q80 375 135 245" fill="none" stroke="#BA7517" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#a4)"/>
+<rect x="338" y="370" width="108" height="20" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text class="ts" x="392" y="384" text-anchor="middle" style="fill:#633806">teleport α=0.1</text>
+<rect x="40" y="355" width="580" height="28" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="340" y="373" text-anchor="middle" style="fill:#26215C">Pages visited more often = higher PageRank. Score = steady-state visit probability π(v)</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       5. TELEPORT OPERATION
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 5</span>
+    <h2>The Teleport Operation</h2>
+    <p class="desc">Two cases: normal pages follow a link with prob (1−α) or teleport with prob α. Dangling nodes always teleport. This guarantees ergodicity.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Teleport operation — two cases">
+<title>Teleport operation in PageRank</title><desc>Left: page with outlinks — follow link prob 1-alpha or teleport prob alpha. Right: dangling node — always teleport.</desc>
+<defs><marker id="a5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="c-purple"><rect x="30" y="28" width="290" height="34" rx="8" stroke-width="0.5"/>
+<text class="th" x="175" y="45" text-anchor="middle" dominant-baseline="central">Case 1: page with outlinks</text></g>
+<g class="node c-purple"><rect x="100" y="90" width="150" height="50" rx="8" stroke-width="0.8"/>
+<text class="th" x="175" y="112" text-anchor="middle" dominant-baseline="central">Current page</text>
+<text class="ts" x="175" y="128" text-anchor="middle" dominant-baseline="central">has outlinks</text></g>
+<g class="node c-teal"><rect x="30" y="210" width="150" height="50" rx="8" stroke-width="0.8"/>
+<text class="th" x="105" y="232" text-anchor="middle" dominant-baseline="central">Follow a link</text>
+<text class="ts" x="105" y="248" text-anchor="middle" dominant-baseline="central">prob = 1 − α</text></g>
+<line x1="145" y1="140" x2="105" y2="208" stroke="#1D9E75" stroke-width="2" marker-end="url(#a5)" fill="none"/>
+<text class="ts" x="108" y="182" text-anchor="middle" style="fill:#0F6E56">e.g. 0.90</text>
+<g class="node c-amber"><rect x="170" y="210" width="150" height="50" rx="8" stroke-width="0.8"/>
+<text class="th" x="245" y="232" text-anchor="middle" dominant-baseline="central">Teleport</text>
+<text class="ts" x="245" y="248" text-anchor="middle" dominant-baseline="central">prob = α = 0.1</text></g>
+<line x1="205" y1="140" x2="245" y2="208" stroke="#BA7517" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#a5)" fill="none"/>
+<text class="ts" x="242" y="182" text-anchor="middle" style="fill:#633806">e.g. 0.10</text>
+<g class="node c-amber"><rect x="100" y="310" width="150" height="50" rx="8" stroke-width="0.5"/>
+<text class="th" x="175" y="332" text-anchor="middle" dominant-baseline="central">Any page (1/N)</text>
+<text class="ts" x="175" y="348" text-anchor="middle" dominant-baseline="central">uniform random</text></g>
+<line x1="245" y1="260" x2="220" y2="308" stroke="#BA7517" stroke-width="1" marker-end="url(#a5)" fill="none"/>
+<line x1="340" y1="28" x2="340" y2="400" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+<g class="c-red"><rect x="360" y="28" width="290" height="34" rx="8" stroke-width="0.5"/>
+<text class="th" x="505" y="45" text-anchor="middle" dominant-baseline="central">Case 2: dangling node</text></g>
+<g class="node c-red"><rect x="430" y="90" width="150" height="50" rx="8" stroke-width="0.8"/>
+<text class="th" x="505" y="112" text-anchor="middle" dominant-baseline="central">Dangling page</text>
+<text class="ts" x="505" y="128" text-anchor="middle" dominant-baseline="central">no outlinks!</text></g>
+<g class="node c-amber"><rect x="430" y="230" width="150" height="50" rx="8" stroke-width="0.8"/>
+<text class="th" x="505" y="252" text-anchor="middle" dominant-baseline="central">Always teleport</text>
+<text class="ts" x="505" y="268" text-anchor="middle" dominant-baseline="central">prob = 1.0</text></g>
+<line x1="505" y1="140" x2="505" y2="228" stroke="#E24B4A" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#a5)" fill="none"/>
+<g class="node c-amber"><rect x="430" y="330" width="150" height="50" rx="8" stroke-width="0.5"/>
+<text class="th" x="505" y="352" text-anchor="middle" dominant-baseline="central">Any page (1/N)</text>
+<text class="ts" x="505" y="368" text-anchor="middle" dominant-baseline="central">uniform random</text></g>
+<line x1="505" y1="280" x2="505" y2="328" stroke="#BA7517" stroke-width="1.5" marker-end="url(#a5)" fill="none"/>
+<rect x="30" y="390" width="620" height="22" rx="5" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="340" y="405" text-anchor="middle" style="fill:#26215C">Teleportation → chain is ergodic: irreducible + aperiodic → unique steady-state π exists</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       6. MARKOV CHAINS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 6</span>
+    <h2>Markov Chains &amp; Transition Matrix</h2>
+    <p class="desc">The web graph becomes a stochastic matrix P via 4 steps: handle dangling nodes, normalize rows, multiply by (1−α), add α/N.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Markov chain and transition matrix">
+<title>Markov chain transition matrix construction</title><desc>Three-node web graph converted into stochastic transition matrix P with teleportation.</desc>
+<defs><marker id="a6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="c-purple"><rect x="30" y="24" width="200" height="30" rx="7" stroke-width="0.5"/>
+<text class="th" x="130" y="39" text-anchor="middle" dominant-baseline="central">Web graph</text></g>
+<g class="node c-purple"><circle cx="130" cy="120" r="34" stroke-width="0.8"/>
+<text class="th" x="130" y="115" text-anchor="middle" dominant-baseline="central">Page 1</text>
+<text class="ts" x="130" y="132" text-anchor="middle" dominant-baseline="central">2 outlinks</text></g>
+<g class="node c-purple"><circle cx="60" cy="250" r="34" stroke-width="0.8"/>
+<text class="th" x="60" y="245" text-anchor="middle" dominant-baseline="central">Page 2</text>
+<text class="ts" x="60" y="262" text-anchor="middle" dominant-baseline="central">1 outlink</text></g>
+<g class="node c-purple"><circle cx="200" cy="250" r="34" stroke-width="0.8"/>
+<text class="th" x="200" y="245" text-anchor="middle" dominant-baseline="central">Page 3</text>
+<text class="ts" x="200" y="262" text-anchor="middle" dominant-baseline="central">1 outlink</text></g>
+<line x1="104" y1="146" x2="76" y2="218" stroke="#7F77DD" stroke-width="1.5" marker-end="url(#a6)" fill="none"/>
+<line x1="156" y1="146" x2="184" y2="218" stroke="#7F77DD" stroke-width="1.5" marker-end="url(#a6)" fill="none"/>
+<line x1="78" y1="220" x2="112" y2="148" stroke="#AFA9EC" stroke-width="1.2" marker-end="url(#a6)" fill="none"/>
+<line x1="180" y1="220" x2="148" y2="148" stroke="#AFA9EC" stroke-width="1.2" marker-end="url(#a6)" fill="none"/>
+<text class="ts" x="72" y="188" text-anchor="middle" style="fill:#534AB7">1/2</text>
+<text class="ts" x="186" y="188" text-anchor="middle" style="fill:#534AB7">1/2</text>
+<text class="ts" x="52" y="180" text-anchor="middle" style="fill:#3C3489">1</text>
+<text class="ts" x="200" y="180" text-anchor="middle" style="fill:#3C3489">1</text>
+<line x1="250" y1="200" x2="290" y2="200" stroke="#888780" stroke-width="1.5" marker-end="url(#a6)" fill="none"/>
+<text class="ts" x="270" y="192" text-anchor="middle" style="fill:#5F5E5A">4 steps</text>
+<g class="c-teal"><rect x="310" y="24" width="340" height="30" rx="7" stroke-width="0.5"/>
+<text class="th" x="480" y="39" text-anchor="middle" dominant-baseline="central">Transition matrix P (α = 0.1)</text></g>
+<text class="ts" x="390" y="80" text-anchor="middle" style="fill:#888780">to 1</text>
+<text class="ts" x="480" y="80" text-anchor="middle" style="fill:#888780">to 2</text>
+<text class="ts" x="570" y="80" text-anchor="middle" style="fill:#888780">to 3</text>
+<text class="ts" x="328" y="115" style="fill:#888780">from 1</text>
+<text class="ts" x="328" y="175" style="fill:#888780">from 2</text>
+<text class="ts" x="328" y="235" style="fill:#888780">from 3</text>
+<g class="c-gray"><rect x="360" y="96" width="60" height="36" rx="5" stroke-width="0.5"/><text class="ts" x="390" y="118" text-anchor="middle" dominant-baseline="central" style="fill:#444441">1/30</text></g>
+<g class="c-purple"><rect x="450" y="96" width="60" height="36" rx="5" stroke-width="0.8"/><text class="ts" x="480" y="118" text-anchor="middle" dominant-baseline="central">13/30</text></g>
+<g class="c-purple"><rect x="540" y="96" width="60" height="36" rx="5" stroke-width="0.8"/><text class="ts" x="570" y="118" text-anchor="middle" dominant-baseline="central">13/30</text></g>
+<g class="c-purple"><rect x="360" y="156" width="60" height="36" rx="5" stroke-width="0.8"/><text class="ts" x="390" y="178" text-anchor="middle" dominant-baseline="central">28/30</text></g>
+<g class="c-gray"><rect x="450" y="156" width="60" height="36" rx="5" stroke-width="0.5"/><text class="ts" x="480" y="178" text-anchor="middle" dominant-baseline="central" style="fill:#444441">1/30</text></g>
+<g class="c-gray"><rect x="540" y="156" width="60" height="36" rx="5" stroke-width="0.5"/><text class="ts" x="570" y="178" text-anchor="middle" dominant-baseline="central" style="fill:#444441">1/30</text></g>
+<g class="c-purple"><rect x="360" y="216" width="60" height="36" rx="5" stroke-width="0.8"/><text class="ts" x="390" y="238" text-anchor="middle" dominant-baseline="central">28/30</text></g>
+<g class="c-gray"><rect x="450" y="216" width="60" height="36" rx="5" stroke-width="0.5"/><text class="ts" x="480" y="238" text-anchor="middle" dominant-baseline="central" style="fill:#444441">1/30</text></g>
+<g class="c-gray"><rect x="540" y="216" width="60" height="36" rx="5" stroke-width="0.5"/><text class="ts" x="570" y="238" text-anchor="middle" dominant-baseline="central" style="fill:#444441">1/30</text></g>
+<text class="ts" x="628" y="115" style="fill:#1D9E75">= 1</text>
+<text class="ts" x="628" y="178" style="fill:#1D9E75">= 1</text>
+<text class="ts" x="628" y="238" style="fill:#1D9E75">= 1</text>
+<rect x="310" y="276" width="340" height="110" rx="8" fill="none" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+<text class="ts" x="320" y="298" style="fill:#5F5E5A">① Replace dangling rows → 1/N uniform</text>
+<text class="ts" x="320" y="316" style="fill:#5F5E5A">② Divide each row by out-degree</text>
+<text class="ts" x="320" y="334" style="fill:#5F5E5A">③ Multiply by (1 − α)</text>
+<text class="ts" x="320" y="352" style="fill:#5F5E5A">④ Add α/N to every entry → P</text>
+<rect x="30" y="330" width="240" height="60" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="150" y="352" text-anchor="middle" style="fill:#085041">Stochastic matrix:</text>
+<text class="ts" x="150" y="368" text-anchor="middle" style="fill:#0F6E56">all rows sum to 1</text>
+<text class="ts" x="150" y="382" text-anchor="middle" style="fill:#0F6E56">all entries ∈ [0, 1]</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       7. ERGODICITY
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 7</span>
+    <h2>Ergodicity &amp; Steady-State Theorem</h2>
+    <p class="desc">Two conditions — irreducibility and aperiodicity — both satisfied by teleportation. Together they guarantee a unique steady-state distribution π.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ergodicity conditions and steady-state theorem">
+<title>Ergodicity: irreducibility and aperiodicity</title><desc>Left: irreducibility — every state reachable from every other via teleport. Right: aperiodicity — teleport self-loop breaks fixed cycles. Bottom: steady-state theorem.</desc>
+<defs><marker id="a7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="c-teal"><rect x="30" y="20" width="290" height="30" rx="7" stroke-width="0.5"/>
+<text class="th" x="175" y="35" text-anchor="middle" dominant-baseline="central">Condition 1: irreducibility</text></g>
+<g class="c-purple"><rect x="360" y="20" width="290" height="30" rx="7" stroke-width="0.5"/>
+<text class="th" x="505" y="35" text-anchor="middle" dominant-baseline="central">Condition 2: aperiodicity</text></g>
+<g class="node c-teal"><circle cx="100" cy="150" r="36" stroke-width="0.8"/>
+<text class="th" x="100" y="145" text-anchor="middle" dominant-baseline="central">Page i</text>
+<text class="ts" x="100" y="162" text-anchor="middle" dominant-baseline="central">any start</text></g>
+<g class="node c-teal"><circle cx="250" cy="150" r="36" stroke-width="0.8"/>
+<text class="th" x="250" y="145" text-anchor="middle" dominant-baseline="central">Page j</text>
+<text class="ts" x="250" y="162" text-anchor="middle" dominant-baseline="central">reachable!</text></g>
+<path d="M136 136 Q175 110 214 136" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a7)"/>
+<path d="M214 164 Q175 190 136 164" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a7)"/>
+<text class="ts" x="175" y="118" text-anchor="middle" style="fill:#085041">via teleport</text>
+<text class="ts" x="175" y="195" text-anchor="middle" style="fill:#085041">always possible</text>
+<rect x="40" y="210" width="270" height="44" rx="7" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="175" y="228" text-anchor="middle" style="fill:#085041">Every state reachable from</text>
+<text class="ts" x="175" y="246" text-anchor="middle" style="fill:#0F6E56">every other state — guaranteed</text>
+<g class="node c-gray"><circle cx="420" cy="130" r="28" stroke-width="0.5"/>
+<text class="ts" x="420" y="130" text-anchor="middle" dominant-baseline="central" style="fill:#444441">A</text></g>
+<g class="node c-gray"><circle cx="530" cy="130" r="28" stroke-width="0.5"/>
+<text class="ts" x="530" y="130" text-anchor="middle" dominant-baseline="central" style="fill:#444441">B</text></g>
+<path d="M448 118 Q475 96 502 118" fill="none" stroke="#E24B4A" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#a7)"/>
+<path d="M502 142 Q475 164 448 142" fill="none" stroke="#E24B4A" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#a7)"/>
+<text class="ts" x="475" y="104" text-anchor="middle" style="fill:#A32D2D">period 2 — bad</text>
+<path d="M420 102 Q390 75 418 70 Q445 65 448 100" fill="none" stroke="#BA7517" stroke-width="1.2" marker-end="url(#a7)"/>
+<text class="ts" x="390" y="68" text-anchor="start" style="fill:#633806">self-loop via</text>
+<text class="ts" x="390" y="82" text-anchor="start" style="fill:#633806">teleport → ok</text>
+<rect x="370" y="210" width="270" height="44" rx="7" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="505" y="228" text-anchor="middle" style="fill:#26215C">No fixed oscillation cycles.</text>
+<text class="ts" x="505" y="246" text-anchor="middle" style="fill:#3C3489">Teleport return = aperiodic</text>
+<g class="node c-amber"><rect x="30" y="290" width="620" height="88" rx="10" stroke-width="0.8"/>
+<text class="th" x="340" y="315" text-anchor="middle" dominant-baseline="central">Theorem 21.1 — Steady-State</text>
+<text class="ts" x="340" y="338" text-anchor="middle" dominant-baseline="central">For every ergodic chain: lim (t→∞) η(i,t) / t = π(i)</text>
+<text class="ts" x="340" y="356" text-anchor="middle" dominant-baseline="central">① π exists and is unique   ② π(i) &gt; 0 for all i   ③ independent of start</text>
+<text class="ts" x="340" y="372" text-anchor="middle" dominant-baseline="central">→ π(i) is the PageRank of page i</text></g>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       8. POWER ITERATION
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 8</span>
+    <h2>Computing PageRank — Power Iteration</h2>
+    <p class="desc">Start from any distribution, repeatedly multiply by P until convergence. Typically 50–100 iterations for web-scale graphs.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Power iteration for PageRank">
+<title>Power iteration steps and worked example</title><desc>x0 uniform, multiply by P repeatedly until convergence to pi. Worked example with 3-node graph alpha=0.5.</desc>
+<defs><marker id="a8" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="node c-gray"><rect x="30" y="40" width="90" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="75" y="60" text-anchor="middle" dominant-baseline="central">x₀</text>
+<text class="ts" x="75" y="78" text-anchor="middle" dominant-baseline="central">uniform</text>
+<text class="ts" x="75" y="90" text-anchor="middle" dominant-baseline="central">1/N each</text></g>
+<line x1="120" y1="68" x2="158" y2="68" stroke="#888780" stroke-width="1.5" marker-end="url(#a8)" fill="none"/>
+<text class="ts" x="139" y="60" text-anchor="middle" style="fill:#5F5E5A">× P</text>
+<g class="node c-purple"><rect x="160" y="40" width="90" height="56" rx="8" stroke-width="0.8"/>
+<text class="th" x="205" y="60" text-anchor="middle" dominant-baseline="central">x₁</text>
+<text class="ts" x="205" y="78" text-anchor="middle" dominant-baseline="central">x₀ · P</text></g>
+<line x1="250" y1="68" x2="288" y2="68" stroke="#7F77DD" stroke-width="1.5" marker-end="url(#a8)" fill="none"/>
+<text class="ts" x="269" y="60" text-anchor="middle" style="fill:#534AB7">× P</text>
+<g class="node c-purple"><rect x="290" y="40" width="90" height="56" rx="8" stroke-width="0.8"/>
+<text class="th" x="335" y="60" text-anchor="middle" dominant-baseline="central">x₂</text>
+<text class="ts" x="335" y="78" text-anchor="middle" dominant-baseline="central">x₁ · P</text></g>
+<line x1="380" y1="68" x2="418" y2="68" stroke="#7F77DD" stroke-width="1.2" marker-end="url(#a8)" fill="none"/>
+<text class="ts" x="399" y="58" text-anchor="middle" style="fill:#888780">…</text>
+<g class="node c-amber"><rect x="420" y="30" width="120" height="76" rx="8" stroke-width="1"/>
+<text class="th" x="480" y="55" text-anchor="middle" dominant-baseline="central">π (converged)</text>
+<text class="ts" x="480" y="73" text-anchor="middle" dominant-baseline="central">‖xₜ₊₁ − xₜ‖ &lt; ε</text>
+<text class="ts" x="480" y="89" text-anchor="middle" dominant-baseline="central">~50–100 iters</text></g>
+<line x1="540" y1="68" x2="620" y2="68" stroke="#BA7517" stroke-width="2" marker-end="url(#a8)" fill="none"/>
+<g class="c-teal"><rect x="622" y="44" width="44" height="48" rx="8" stroke-width="0.8"/>
+<text class="th" x="644" y="62" text-anchor="middle" dominant-baseline="central">PR</text>
+<text class="ts" x="644" y="80" text-anchor="middle" dominant-baseline="central">scores</text></g>
+<rect x="30" y="130" width="620" height="210" rx="10" fill="none" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+<text class="th" x="340" y="152" text-anchor="middle" dominant-baseline="central">Worked example — 3 nodes, α = 0.5</text>
+<text class="ts" x="340" y="172" text-anchor="middle" style="fill:#5F5E5A">Links: 1→2, 3→2, 2→1, 2→3</text>
+<text class="ts" x="60" y="200" style="fill:#888780">iter</text>
+<text class="ts" x="180" y="200" text-anchor="middle" style="fill:#888780">π(1)</text>
+<text class="ts" x="340" y="200" text-anchor="middle" style="fill:#888780">π(2)</text>
+<text class="ts" x="500" y="200" text-anchor="middle" style="fill:#888780">π(3)</text>
+<line x1="40" y1="208" x2="640" y2="208" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="60" y="228" style="fill:#5F5E5A">x₀</text>
+<g class="c-gray"><rect x="140" y="214" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="180" y="230" text-anchor="middle" dominant-baseline="central" style="fill:#444441">1.000</text></g>
+<g class="c-gray"><rect x="300" y="214" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="340" y="230" text-anchor="middle" dominant-baseline="central" style="fill:#444441">0.000</text></g>
+<g class="c-gray"><rect x="460" y="214" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="500" y="230" text-anchor="middle" dominant-baseline="central" style="fill:#444441">0.000</text></g>
+<text class="ts" x="60" y="258" style="fill:#5F5E5A">x₁</text>
+<g class="c-purple"><rect x="140" y="244" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="180" y="258" text-anchor="middle" dominant-baseline="central">0.167</text></g>
+<g class="c-purple"><rect x="300" y="244" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="340" y="258" text-anchor="middle" dominant-baseline="central">0.667</text></g>
+<g class="c-purple"><rect x="460" y="244" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="500" y="258" text-anchor="middle" dominant-baseline="central">0.167</text></g>
+<text class="ts" x="60" y="288" style="fill:#5F5E5A">x₂</text>
+<g class="c-purple"><rect x="140" y="274" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="180" y="288" text-anchor="middle" dominant-baseline="central">0.333</text></g>
+<g class="c-purple"><rect x="300" y="274" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="340" y="288" text-anchor="middle" dominant-baseline="central">0.333</text></g>
+<g class="c-purple"><rect x="460" y="274" width="80" height="24" rx="5" stroke-width="0.5"/><text class="ts" x="500" y="288" text-anchor="middle" dominant-baseline="central">0.333</text></g>
+<text class="ts" x="60" y="322" style="fill:#BA7517;font-weight:500">π</text>
+<g class="c-amber"><rect x="140" y="304" width="80" height="28" rx="5" stroke-width="0.8"/><text class="th" x="180" y="321" text-anchor="middle" dominant-baseline="central">5/18</text></g>
+<g class="c-amber"><rect x="300" y="304" width="80" height="28" rx="5" stroke-width="1.2"/><text class="th" x="340" y="321" text-anchor="middle" dominant-baseline="central">4/9 ★</text></g>
+<g class="c-amber"><rect x="460" y="304" width="80" height="28" rx="5" stroke-width="0.8"/><text class="th" x="500" y="321" text-anchor="middle" dominant-baseline="central">5/18</text></g>
+<text class="ts" x="340" y="358" text-anchor="middle" style="fill:#633806">Page 2 highest PR — both pages 1 and 3 link only to it</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       9. TOPIC-SPECIFIC PAGERANK
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 9</span>
+    <h2>Topic-Specific &amp; Personalized PageRank</h2>
+    <p class="desc">Restrict teleportation to a topic-specific set S. Personalized scores are linear combinations of pre-computed topic vectors — no per-user recomputation needed.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Topic-specific and personalized PageRank">
+<title>Topic-specific PageRank and personalization</title><desc>Three variants: standard uniform teleport, sports-specific teleport, politics-specific teleport. Bottom shows personalized linear combination.</desc>
+<defs><marker id="a9" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="c-gray"><rect x="30" y="20" width="180" height="28" rx="7" stroke-width="0.5"/>
+<text class="th" x="120" y="34" text-anchor="middle" dominant-baseline="central">Standard PageRank</text></g>
+<circle cx="120" cy="110" r="50" fill="none" stroke="#888780" stroke-width="0.8" stroke-dasharray="4 3"/>
+<text class="ts" x="120" y="90" text-anchor="middle" style="fill:#5F5E5A">entire web</text>
+<circle cx="100" cy="105" r="4" fill="#888780" opacity="0.5"/>
+<circle cx="130" cy="95" r="4" fill="#888780" opacity="0.5"/>
+<circle cx="115" cy="125" r="4" fill="#888780" opacity="0.5"/>
+<circle cx="142" cy="115" r="4" fill="#888780" opacity="0.5"/>
+<circle cx="98" cy="128" r="4" fill="#888780" opacity="0.5"/>
+<line x1="120" y1="160" x2="100" y2="148" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#a9)" fill="none"/>
+<line x1="120" y1="160" x2="130" y2="145" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#a9)" fill="none"/>
+<line x1="120" y1="160" x2="140" y2="155" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#a9)" fill="none"/>
+<rect x="42" y="172" width="156" height="30" rx="6" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+<text class="ts" x="120" y="191" text-anchor="middle" style="fill:#444441">teleport → any of N pages</text>
+<g class="c-teal"><rect x="250" y="20" width="180" height="28" rx="7" stroke-width="0.5"/>
+<text class="th" x="340" y="34" text-anchor="middle" dominant-baseline="central">Sports PageRank</text></g>
+<circle cx="340" cy="110" r="50" fill="none" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+<circle cx="318" cy="100" r="7" fill="#1D9E75" opacity="0.8"/>
+<circle cx="352" cy="92" r="7" fill="#1D9E75" opacity="0.8"/>
+<circle cx="330" cy="125" r="7" fill="#1D9E75" opacity="0.8"/>
+<circle cx="358" cy="120" r="3" fill="#888780" opacity="0.25"/>
+<circle cx="315" cy="122" r="3" fill="#888780" opacity="0.25"/>
+<text class="ts" x="340" y="152" text-anchor="middle" style="fill:#085041">S = {sports pages}</text>
+<line x1="318" y1="160" x2="318" y2="147" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a9)" fill="none"/>
+<line x1="340" y1="160" x2="340" y2="147" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a9)" fill="none"/>
+<line x1="362" y1="160" x2="362" y2="147" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a9)" fill="none"/>
+<rect x="260" y="172" width="160" height="30" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="340" y="191" text-anchor="middle" style="fill:#085041">teleport → only S</text>
+<g class="c-purple"><rect x="470" y="20" width="180" height="28" rx="7" stroke-width="0.5"/>
+<text class="th" x="560" y="34" text-anchor="middle" dominant-baseline="central">Politics PageRank</text></g>
+<circle cx="560" cy="110" r="50" fill="none" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+<circle cx="538" cy="100" r="7" fill="#7F77DD" opacity="0.8"/>
+<circle cx="572" cy="92" r="7" fill="#7F77DD" opacity="0.8"/>
+<circle cx="550" cy="125" r="7" fill="#7F77DD" opacity="0.8"/>
+<circle cx="578" cy="120" r="3" fill="#888780" opacity="0.25"/>
+<circle cx="535" cy="122" r="3" fill="#888780" opacity="0.25"/>
+<line x1="538" y1="160" x2="538" y2="147" stroke="#7F77DD" stroke-width="1.5" marker-end="url(#a9)" fill="none"/>
+<line x1="560" y1="160" x2="560" y2="147" stroke="#7F77DD" stroke-width="1.5" marker-end="url(#a9)" fill="none"/>
+<line x1="582" y1="160" x2="582" y2="147" stroke="#7F77DD" stroke-width="1.5" marker-end="url(#a9)" fill="none"/>
+<rect x="480" y="172" width="160" height="30" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="560" y="191" text-anchor="middle" style="fill:#26215C">teleport → only politics</text>
+<g class="node c-amber"><rect x="140" y="250" width="400" height="100" rx="10" stroke-width="0.8"/>
+<text class="th" x="340" y="276" text-anchor="middle" dominant-baseline="central">Personalized PageRank</text>
+<text class="ts" x="340" y="298" text-anchor="middle" dominant-baseline="central">user: 60% sports, 40% politics</text>
+<text class="th" x="340" y="322" text-anchor="middle" dominant-baseline="central">π_user = 0.6 · π_sports + 0.4 · π_politics</text>
+<text class="ts" x="340" y="342" text-anchor="middle" dominant-baseline="central">linearity → no per-user recomputation needed</text></g>
+<line x1="340" y1="202" x2="340" y2="248" stroke="#1D9E75" stroke-width="1.2" marker-end="url(#a9)" fill="none"/>
+<line x1="560" y1="202" x2="500" y2="248" stroke="#7F77DD" stroke-width="1.2" marker-end="url(#a9)" fill="none"/>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       10-11. HITS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slides 10–11</span>
+    <h2>Hubs &amp; Authorities — HITS</h2>
+    <p class="desc">Good hubs link to many good authorities. Good authorities are linked by many good hubs. Mutually reinforcing — resolved by iterative eigenvector computation.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HITS hubs and authorities mutual reinforcement">
+<title>HITS hubs and authorities</title><desc>Hub pages on left with h scores, authority pages on right with a scores. Arrows thickness shows hub score weight. Update rules shown in center. Matrix eigenvalue interpretation at bottom.</desc>
+<defs><marker id="a10s" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a10m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a10w" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9FE1CB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a10b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#BA7517" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<g class="c-teal"><rect x="30" y="20" width="220" height="30" rx="8" stroke-width="0.5"/>
+<text class="th" x="140" y="35" text-anchor="middle" dominant-baseline="central">Hubs h(v)</text></g>
+<text class="ts" x="140" y="66" text-anchor="middle" style="fill:#085041">link to many good authorities</text>
+<g class="c-purple"><rect x="430" y="20" width="220" height="30" rx="8" stroke-width="0.5"/>
+<text class="th" x="540" y="35" text-anchor="middle" dominant-baseline="central">Authorities a(v)</text></g>
+<text class="ts" x="540" y="66" text-anchor="middle" style="fill:#26215C">linked by many good hubs</text>
+<g class="node c-teal"><rect x="40" y="90" width="190" height="50" rx="8" stroke-width="1"/>
+<text class="th" x="135" y="111" text-anchor="middle" dominant-baseline="central">Wikipedia article</text>
+<text class="ts" x="135" y="128" text-anchor="middle" dominant-baseline="central">h = 0.82</text></g>
+<g class="node c-teal"><rect x="40" y="185" width="190" height="50" rx="8" stroke-width="0.8"/>
+<text class="th" x="135" y="206" text-anchor="middle" dominant-baseline="central">News aggregator</text>
+<text class="ts" x="135" y="223" text-anchor="middle" dominant-baseline="central">h = 0.61</text></g>
+<g class="node c-teal"><rect x="40" y="280" width="190" height="50" rx="8" stroke-width="0.6"/>
+<text class="th" x="135" y="301" text-anchor="middle" dominant-baseline="central">Topic directory</text>
+<text class="ts" x="135" y="318" text-anchor="middle" dominant-baseline="central">h = 0.38</text></g>
+<g class="node c-purple"><rect x="450" y="90" width="200" height="50" rx="8" stroke-width="1"/>
+<text class="th" x="550" y="111" text-anchor="middle" dominant-baseline="central">NCI cancer page</text>
+<text class="ts" x="550" y="128" text-anchor="middle" dominant-baseline="central">a = 0.91</text></g>
+<g class="node c-purple"><rect x="450" y="185" width="200" height="50" rx="8" stroke-width="0.8"/>
+<text class="th" x="550" y="206" text-anchor="middle" dominant-baseline="central">WHO health portal</text>
+<text class="ts" x="550" y="223" text-anchor="middle" dominant-baseline="central">a = 0.74</text></g>
+<g class="node c-purple"><rect x="450" y="280" width="200" height="50" rx="8" stroke-width="0.6"/>
+<text class="th" x="550" y="301" text-anchor="middle" dominant-baseline="central">PubMed research</text>
+<text class="ts" x="550" y="318" text-anchor="middle" dominant-baseline="central">a = 0.45</text></g>
+<line x1="230" y1="110" x2="448" y2="110" stroke="#1D9E75" stroke-width="3" marker-end="url(#a10s)" fill="none"/>
+<line x1="230" y1="118" x2="448" y2="205" stroke="#1D9E75" stroke-width="2" marker-end="url(#a10s)" fill="none"/>
+<line x1="230" y1="205" x2="448" y2="205" stroke="#5DCAA5" stroke-width="2" marker-end="url(#a10m)" fill="none"/>
+<line x1="230" y1="212" x2="448" y2="300" stroke="#5DCAA5" stroke-width="1.2" marker-end="url(#a10m)" fill="none"/>
+<line x1="230" y1="300" x2="448" y2="300" stroke="#9FE1CB" stroke-width="1" marker-end="url(#a10w)" fill="none"/>
+<rect x="260" y="150" width="160" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="340" y="167" text-anchor="middle" style="fill:#26215C">h(v) ← Σ a(y)</text>
+<text class="ts" x="340" y="185" text-anchor="middle" style="fill:#3C3489">for all y that v links to</text>
+<rect x="260" y="240" width="160" height="44" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="340" y="257" text-anchor="middle" style="fill:#085041">a(v) ← Σ h(y)</text>
+<text class="ts" x="340" y="275" text-anchor="middle" style="fill:#0F6E56">for all y linking to v</text>
+<path d="M340 194 Q340 224 340 238" fill="none" stroke="#BA7517" stroke-width="1.2" marker-end="url(#a10b)"/>
+<g class="node c-amber"><rect x="30" y="355" width="620" height="45" rx="8" stroke-width="0.5"/>
+<text class="th" x="340" y="373" text-anchor="middle" dominant-baseline="central">Matrix form: h = AAᵀ · h  ·  a = AᵀA · a</text>
+<text class="ts" x="340" y="392" text-anchor="middle" dominant-baseline="central">Hub scores → principal eigenvector of AAᵀ   ·   Authority scores → principal eigenvector of AᵀA</text></g>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       12. HITS WEB SUBSET
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 12</span>
+    <h2>HITS — Choosing the Web Subset</h2>
+    <p class="desc">Root set: ~200 text-matching pages. Base set: expand with in-neighbors (potential hubs) and out-neighbors (potential authorities).</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HITS root set and base set">
+<title>HITS web subset construction</title><desc>Stage 1 root set from text query. Stage 2 base set expands with in and out neighbors.</desc>
+<defs><marker id="a12" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="c-gray"><rect x="30" y="20" width="180" height="28" rx="7" stroke-width="0.5"/>
+<text class="th" x="120" y="34" text-anchor="middle" dominant-baseline="central">Stage 1 — Root set</text></g>
+<g class="node c-gray"><rect x="30" y="60" width="180" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="120" y="78" text-anchor="middle" dominant-baseline="central">Text query</text>
+<text class="ts" x="120" y="96" text-anchor="middle" dominant-baseline="central">~200 matching pages</text></g>
+<rect x="30" y="120" width="180" height="80" rx="8" fill="none" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+<text class="ts" x="120" y="140" text-anchor="middle" style="fill:#888780">Root set R</text>
+<circle cx="80" cy="165" r="8" fill="#888780" opacity="0.6"/>
+<circle cx="110" cy="158" r="8" fill="#888780" opacity="0.6"/>
+<circle cx="140" cy="170" r="8" fill="#888780" opacity="0.6"/>
+<circle cx="170" cy="158" r="8" fill="#888780" opacity="0.6"/>
+<circle cx="95" cy="182" r="6" fill="#888780" opacity="0.4"/>
+<circle cx="155" cy="180" r="6" fill="#888780" opacity="0.4"/>
+<line x1="212" y1="160" x2="258" y2="160" stroke="#888780" stroke-width="1.5" marker-end="url(#a12)" fill="none"/>
+<text class="ts" x="235" y="152" text-anchor="middle" style="fill:#5F5E5A">expand</text>
+<g class="c-teal"><rect x="268" y="20" width="380" height="28" rx="7" stroke-width="0.5"/>
+<text class="th" x="458" y="34" text-anchor="middle" dominant-baseline="central">Stage 2 — Base set</text></g>
+<rect x="268" y="60" width="380" height="270" rx="12" fill="none" stroke="#1D9E75" stroke-width="0.8" stroke-dasharray="5 3"/>
+<text class="ts" x="458" y="82" text-anchor="middle" style="fill:#085041">Base set B = R ∪ in-neighbors ∪ out-neighbors</text>
+<rect x="348" y="100" width="220" height="100" rx="8" fill="none" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 2"/>
+<text class="ts" x="458" y="118" text-anchor="middle" style="fill:#888780">Root set R</text>
+<circle cx="400" cy="155" r="9" fill="#888780" opacity="0.7"/>
+<circle cx="430" cy="145" r="9" fill="#888780" opacity="0.7"/>
+<circle cx="460" cy="158" r="9" fill="#888780" opacity="0.7"/>
+<circle cx="490" cy="145" r="9" fill="#888780" opacity="0.7"/>
+<circle cx="520" cy="155" r="9" fill="#888780" opacity="0.7"/>
+<g class="node c-teal"><rect x="278" y="220" width="140" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="348" y="238" text-anchor="middle" dominant-baseline="central">In-neighbors</text>
+<text class="ts" x="348" y="256" text-anchor="middle" dominant-baseline="central">potential hubs</text></g>
+<line x1="390" y1="238" x2="418" y2="190" stroke="#1D9E75" stroke-width="1.2" marker-end="url(#a12)" fill="none"/>
+<g class="node c-purple"><rect x="498" y="220" width="140" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="568" y="238" text-anchor="middle" dominant-baseline="central">Out-neighbors</text>
+<text class="ts" x="568" y="256" text-anchor="middle" dominant-baseline="central">potential authorities</text></g>
+<line x1="498" y1="238" x2="470" y2="190" stroke="#7F77DD" stroke-width="1.2" marker-end="url(#a12)" fill="none"/>
+<rect x="278" y="286" width="360" height="32" rx="7" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text class="ts" x="458" y="299" text-anchor="middle" style="fill:#412402">Good authority may NOT contain query text —</text>
+<text class="ts" x="458" y="313" text-anchor="middle" style="fill:#633806">e.g. "computer" missing from IBM's page</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       13. PAGERANK VS HITS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 13</span>
+    <h2>PageRank vs. HITS — Comparison</h2>
+    <p class="desc">PageRank is static and global; HITS is dynamic and query-specific. In practice, major search engines moved away from HITS while PageRank variants remain foundational.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PageRank vs HITS comparison table">
+<title>PageRank vs HITS comparison</title><desc>Six dimensions compared: timing, query independence, scores, scope, spam resistance, and usage.</desc>
+<rect x="30" y="20" width="190" height="34" rx="8" fill="none"/>
+<g class="c-purple"><rect x="240" y="20" width="190" height="34" rx="8" stroke-width="0.8"/>
+<text class="th" x="335" y="37" text-anchor="middle" dominant-baseline="central">PageRank</text></g>
+<g class="c-teal"><rect x="450" y="20" width="200" height="34" rx="8" stroke-width="0.8"/>
+<text class="th" x="550" y="37" text-anchor="middle" dominant-baseline="central">HITS</text></g>
+<text class="ts" x="35" y="82" style="fill:#5F5E5A">Timing</text>
+<text class="ts" x="35" y="130" style="fill:#5F5E5A">Query</text>
+<text class="ts" x="35" y="178" style="fill:#5F5E5A">Scores</text>
+<text class="ts" x="35" y="226" style="fill:#5F5E5A">Scope</text>
+<text class="ts" x="35" y="274" style="fill:#5F5E5A">Spam</text>
+<text class="ts" x="35" y="322" style="fill:#5F5E5A">Usage</text>
+<line x1="30" y1="100" x2="650" y2="100" stroke="#B4B2A9" stroke-width="0.4"/>
+<line x1="30" y1="148" x2="650" y2="148" stroke="#B4B2A9" stroke-width="0.4"/>
+<line x1="30" y1="196" x2="650" y2="196" stroke="#B4B2A9" stroke-width="0.4"/>
+<line x1="30" y1="244" x2="650" y2="244" stroke="#B4B2A9" stroke-width="0.4"/>
+<line x1="30" y1="292" x2="650" y2="292" stroke="#B4B2A9" stroke-width="0.4"/>
+<line x1="230" y1="60" x2="230" y2="350" stroke="#B4B2A9" stroke-width="0.4"/>
+<line x1="440" y1="60" x2="440" y2="350" stroke="#B4B2A9" stroke-width="0.4"/>
+<g class="node c-purple"><rect x="242" y="62" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="335" y="82" text-anchor="middle" dominant-baseline="central">Offline, pre-computed</text></g>
+<g class="node c-purple"><rect x="242" y="110" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="335" y="130" text-anchor="middle" dominant-baseline="central">Query-independent</text></g>
+<g class="c-purple"><rect x="242" y="158" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="335" y="178" text-anchor="middle" dominant-baseline="central">1 score per page</text></g>
+<g class="c-purple"><rect x="242" y="206" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="335" y="226" text-anchor="middle" dominant-baseline="central">Entire web</text></g>
+<g class="node c-green"><rect x="242" y="254" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="335" y="274" text-anchor="middle" dominant-baseline="central">Teleport smooths spam</text></g>
+<g class="c-purple"><rect x="242" y="302" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="335" y="322" text-anchor="middle" dominant-baseline="central">General web ranking</text></g>
+<g class="node c-teal"><rect x="452" y="62" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="549" y="82" text-anchor="middle" dominant-baseline="central">Online, per query</text></g>
+<g class="node c-teal"><rect x="452" y="110" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="549" y="130" text-anchor="middle" dominant-baseline="central">Query-dependent</text></g>
+<g class="c-teal"><rect x="452" y="158" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="549" y="178" text-anchor="middle" dominant-baseline="central">Hub + authority score</text></g>
+<g class="c-teal"><rect x="452" y="206" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="549" y="226" text-anchor="middle" dominant-baseline="central">Small subset</text></g>
+<g class="node c-red"><rect x="452" y="254" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="549" y="274" text-anchor="middle" dominant-baseline="central">Topic drift risk</text></g>
+<g class="c-teal"><rect x="452" y="302" width="186" height="34" rx="6" stroke-width="0.5"/><text class="ts" x="549" y="322" text-anchor="middle" dominant-baseline="central">Broad topic searches</text></g>
+<text class="ts" x="340" y="369" text-anchor="middle" style="fill:#888780">In practice: major engines moved away from HITS; PageRank variants remain foundational</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       14. LINK SPAM
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 14</span>
+    <h2>Link Spam &amp; Spam Detection</h2>
+    <p class="desc">Link farms, anchor text spam, and Google bombing all exploit the quality signals used by PageRank and HITS. TrustRank propagates trust from known-good seed pages.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Link spam types and TrustRank defense">
+<title>Link spam and TrustRank</title><desc>Left: link farm pages pointing to target. Center: anchor text spam HTML. Right: TrustRank propagation from trusted seeds.</desc>
+<defs><marker id="a14r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="a14g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="c-red"><rect x="30" y="20" width="180" height="26" rx="7" stroke-width="0.5"/>
+<text class="th" x="120" y="33" text-anchor="middle" dominant-baseline="central">Link farm</text></g>
+<g class="node c-gray"><rect x="30" y="58" width="72" height="36" rx="6" stroke-width="0.5"/><text class="ts" x="66" y="79" text-anchor="middle" dominant-baseline="central" style="fill:#444441">fake-1</text></g>
+<g class="node c-gray"><rect x="30" y="108" width="72" height="36" rx="6" stroke-width="0.5"/><text class="ts" x="66" y="129" text-anchor="middle" dominant-baseline="central" style="fill:#444441">fake-2</text></g>
+<g class="node c-gray"><rect x="30" y="158" width="72" height="36" rx="6" stroke-width="0.5"/><text class="ts" x="66" y="179" text-anchor="middle" dominant-baseline="central" style="fill:#444441">fake-3</text></g>
+<g class="node c-red"><rect x="138" y="108" width="80" height="36" rx="6" stroke-width="0.8"/><text class="ts" x="178" y="129" text-anchor="middle" dominant-baseline="central" style="fill:#791F1F">target</text></g>
+<line x1="102" y1="76" x2="136" y2="120" stroke="#E24B4A" stroke-width="1" marker-end="url(#a14r)" fill="none"/>
+<line x1="102" y1="126" x2="136" y2="126" stroke="#E24B4A" stroke-width="1" marker-end="url(#a14r)" fill="none"/>
+<line x1="102" y1="176" x2="136" y2="132" stroke="#E24B4A" stroke-width="1" marker-end="url(#a14r)" fill="none"/>
+<g class="c-red"><rect x="240" y="20" width="190" height="26" rx="7" stroke-width="0.5"/>
+<text class="th" x="335" y="33" text-anchor="middle" dominant-baseline="central">Anchor text spam</text></g>
+<g class="node c-gray"><rect x="250" y="58" width="160" height="80" rx="8" stroke-width="0.5"/>
+<text class="ts" x="330" y="82" text-anchor="middle" style="fill:#444441">&lt;a href="target.com"&gt;</text>
+<text class="ts" x="330" y="100" text-anchor="middle" style="fill:#A32D2D">  misleading text</text>
+<text class="ts" x="330" y="118" text-anchor="middle" style="fill:#444441">&lt;/a&gt;</text></g>
+<rect x="250" y="155" width="160" height="44" rx="8" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+<text class="ts" x="330" y="173" text-anchor="middle" style="fill:#A32D2D">Google bombing:</text>
+<text class="ts" x="330" y="191" text-anchor="middle" style="fill:#791F1F">coord. campaign → wrong rank</text>
+<g class="c-teal"><rect x="460" y="20" width="190" height="26" rx="7" stroke-width="0.5"/>
+<text class="th" x="555" y="33" text-anchor="middle" dominant-baseline="central">TrustRank defense</text></g>
+<g class="node c-teal"><rect x="460" y="58" width="190" height="44" rx="8" stroke-width="0.8"/>
+<text class="th" x="555" y="76" text-anchor="middle" dominant-baseline="central">Trusted seeds</text>
+<text class="ts" x="555" y="94" text-anchor="middle" dominant-baseline="central">.gov / .edu / known trusted</text></g>
+<line x1="555" y1="102" x2="555" y2="125" stroke="#1D9E75" stroke-width="2" marker-end="url(#a14g)" fill="none"/>
+<g class="node c-teal"><rect x="470" y="127" width="170" height="44" rx="8" stroke-width="0.6"/>
+<text class="th" x="555" y="145" text-anchor="middle" dominant-baseline="central">Trust propagates</text>
+<text class="ts" x="555" y="163" text-anchor="middle" dominant-baseline="central">via links (like PageRank)</text></g>
+<line x1="555" y1="171" x2="555" y2="194" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a14g)" fill="none"/>
+<g class="node c-green"><rect x="470" y="196" width="170" height="44" rx="8" stroke-width="0.6"/>
+<text class="th" x="555" y="214" text-anchor="middle" dominant-baseline="central">Low trust score</text>
+<text class="ts" x="555" y="232" text-anchor="middle" dominant-baseline="central">→ likely spam</text></g>
+<rect x="460" y="258" width="190" height="44" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+<text class="ts" x="555" y="276" text-anchor="middle" style="fill:#085041">SpamMass = PageRank − TrustRank</text>
+<text class="ts" x="555" y="294" text-anchor="middle" style="fill:#0F6E56">high gap → spam candidate</text>
+<rect x="30" y="230" width="410" height="70" rx="8" fill="none" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+<text class="ts" x="44" y="250" style="fill:#5F5E5A">Farm detection signals:</text>
+<text class="ts" x="44" y="268" style="fill:#888780">· thin/copied content  · all point same target  · no external inlinks</text>
+<text class="ts" x="44" y="286" style="fill:#888780">· recently created domains  · unnatural linking patterns</text>
+<rect x="30" y="318" width="620" height="62" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text class="th" x="340" y="340" text-anchor="middle" dominant-baseline="central">Ongoing arms race</text>
+<text class="ts" x="340" y="360" text-anchor="middle" style="fill:#633806">Search engines: detect farms, penalise anchor spam, maintain trusted seed lists</text>
+<text class="ts" x="340" y="376" text-anchor="middle" style="fill:#854F0B">Spammers: cloaking, private blog networks, paid links, AI-generated content</text>
+</svg>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══════════════════════════════════════════════════════
+       19. WEB GRAPH STRUCTURE
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <span class="section-label">Slide 19</span>
+    <h2>The Structure of the Web Graph</h2>
+    <p class="desc">Broder et al. (2000) found the web has a "bow-tie" structure: SCC core (~25%), IN, OUT, and tendrils. In-degree follows a power law — most pages have few links, a few have enormous inlinks.</p>
+    <div class="vis-wrap">
+<svg width="100%" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bow-tie structure of the web graph">
+<title>Web graph bow-tie structure</title><desc>Four components: SCC strongly connected core, IN component feeding into SCC, OUT component reachable from SCC, and tendrils/islands.</desc>
+<defs><marker id="a19" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="node c-teal"><ellipse cx="120" cy="170" rx="90" ry="110" stroke-width="0.8"/>
+<text class="th" x="120" y="158" text-anchor="middle" dominant-baseline="central">IN</text>
+<text class="ts" x="120" y="176" text-anchor="middle" dominant-baseline="central">~25% of pages</text>
+<text class="ts" x="120" y="193" text-anchor="middle" dominant-baseline="central">reach SCC</text>
+<text class="ts" x="120" y="210" text-anchor="middle" dominant-baseline="central">can't be reached</text></g>
+<g class="node c-purple"><ellipse cx="340" cy="170" rx="100" ry="120" stroke-width="1.2"/>
+<text class="th" x="340" y="152" text-anchor="middle" dominant-baseline="central">SCC</text>
+<text class="ts" x="340" y="172" text-anchor="middle" dominant-baseline="central">~25% of pages</text>
+<text class="ts" x="340" y="190" text-anchor="middle" dominant-baseline="central">any page reachable</text>
+<text class="ts" x="340" y="207" text-anchor="middle" dominant-baseline="central">from any other</text></g>
+<g class="node c-coral"><ellipse cx="560" cy="170" rx="90" ry="110" stroke-width="0.8"/>
+<text class="th" x="560" y="158" text-anchor="middle" dominant-baseline="central">OUT</text>
+<text class="ts" x="560" y="176" text-anchor="middle" dominant-baseline="central">~25% of pages</text>
+<text class="ts" x="560" y="193" text-anchor="middle" dominant-baseline="central">reachable from SCC</text>
+<text class="ts" x="560" y="210" text-anchor="middle" dominant-baseline="central">can't reach back</text></g>
+<line x1="210" y1="155" x2="238" y2="155" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#a19)" fill="none"/>
+<line x1="210" y1="185" x2="238" y2="185" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#a19)" fill="none"/>
+<line x1="440" y1="155" x2="468" y2="155" stroke="#D85A30" stroke-width="2.5" marker-end="url(#a19)" fill="none"/>
+<line x1="440" y1="185" x2="468" y2="185" stroke="#D85A30" stroke-width="2.5" marker-end="url(#a19)" fill="none"/>
+<g class="node c-gray"><rect x="30" y="296" width="130" height="32" rx="8" stroke-width="0.5"/>
+<text class="ts" x="95" y="316" text-anchor="middle" dominant-baseline="central" style="fill:#444441">Tendrils ~25%</text></g>
+<g class="node c-gray"><rect x="520" y="296" width="130" height="32" rx="8" stroke-width="0.5"/>
+<text class="ts" x="585" y="316" text-anchor="middle" dominant-baseline="central" style="fill:#444441">Islands / isolated</text></g>
+<rect x="200" y="296" width="280" height="32" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="340" y="316" text-anchor="middle" style="fill:#26215C">In-degree ~ power law: k⁻²  ·  few hubs, many small pages</text>
+</svg>
+    </div>
+  </div>
+
+</main>
+</body>
+</html>

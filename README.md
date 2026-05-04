@@ -20,6 +20,7 @@ Interactive course notes and quiz system. All content is in English.
 | 10 | Probabilistic IR | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch10.html) |
 | 11 | Text Classification, Naive Bayes & LSI | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch11.html) |
 | 21 | Link Analysis | Ready · 20 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch21.html) |
+| 21+ | Link Analysis — Visual Companion | Infographic · 17 slides | [Open →](https://rmz-oz.github.io/information_retrieval/ch21-infographic.html) |
 
 ## Topics Covered
 
@@ -58,3 +59,6 @@ Text classification (γ: X → C), supervised learning, Multinomial Naive Bayes,
 
 **Chapter 21 — Link Analysis**
 Web as a graph, anchor text, link spam, PageRank (random surfer model, teleport operation, Markov chains, power iteration, topic-specific and personalized PageRank), HITS (hub & authority scores, iterative update rules, AAᵀ / AᵀA eigenvectors, base set construction).
+
+**Chapter 21+ — Link Analysis Visual Companion**
+17 slide-based SVG infographics walking through the chapter visually: search engine timeline 1990–1998, anchor text power, citation analysis, PageRank random surfer, teleport operation, Markov transition matrices, ergodicity, power iteration worked example, topic-specific / personalized PR, HITS hubs & authorities.
