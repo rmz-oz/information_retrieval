@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IR &amp; PageRank Evolution — Mind Map</title>
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vis-data@7.1.9/peer/umd/vis-data.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f7f8fa;
+    --border: #e2e5ec;
+    --text: #1a1d24;
+    --muted: #6b7280;
+    --accent-ir: #2563eb;
+    --accent-pr: #d97706;
+    --accent-cross: #db2777;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+               font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+               overflow: hidden; }
+  #network  { background: var(--bg); position: relative; width: 100vw; height: 100vh; }
+  #panel    { position: absolute; right: 16px; top: 70px; width: 380px;
+              max-height: calc(100vh - 90px);
+              background: rgba(255,255,255,.97); backdrop-filter: blur(10px);
+              border: 1px solid var(--border); border-radius: 12px;
+              padding: 22px 24px 20px; overflow-y: auto;
+              box-shadow: 0 8px 30px rgba(0,0,0,.10);
+              z-index: 20; display: none; }
+  #panel.visible { display: block; }
+  #panel .close { position: absolute; right: 12px; top: 12px;
+                  background: transparent; border: 0; font-size: 22px;
+                  color: var(--muted); cursor: pointer; padding: 0; line-height: 1; }
+  #panel .close:hover { color: var(--text); }
+  #panel h2 { font-size: 20px; margin: 0 0 8px; line-height: 1.25; padding-right: 24px; }
+  #panel .era-tag { display: inline-block; padding: 3px 10px; font-size: 11px;
+                    border-radius: 999px; background: #eef0f4; color: var(--muted);
+                    margin-bottom: 14px; letter-spacing: 0.04em; }
+  #panel .era-tag.ir { background: rgba(37,99,235,.10); color: var(--accent-ir); }
+  #panel .era-tag.pr { background: rgba(217,119,6,.12); color: var(--accent-pr); }
+  #panel p { line-height: 1.55; color: #2d323d; font-size: 14px; margin: 0 0 12px; }
+  #panel ul { padding-left: 20px; margin: 0 0 14px; }
+  #panel li { line-height: 1.55; color: #2d323d; font-size: 14px; margin-bottom: 4px; }
+  #panel strong { color: var(--text); }
+  #legend { position: absolute; left: 16px; top: 16px; background: rgba(255,255,255,.92);
+            backdrop-filter: blur(8px); border: 1px solid var(--border);
+            padding: 12px 14px; border-radius: 10px; font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.04); color: var(--text); z-index: 10; }
+  #legend .row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  #legend .dot { width: 12px; height: 12px; border-radius: 50%; }
+  #search { position: absolute; right: 16px; top: 16px;
+            z-index: 30;
+            background: rgba(255,255,255,.95); border: 1px solid var(--border);
+            color: var(--text); padding: 8px 12px; border-radius: 8px;
+            font-size: 13px; width: 220px; outline: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,.04); z-index: 10; }
+  #search::placeholder { color: var(--muted); }
+  #search:focus { border-color: var(--accent-ir); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div id="network">
+  <div id="legend">
+    <div class="row"><div class="dot" style="background:#2563eb"></div> IR Evolution (7 eras)</div>
+    <div class="row"><div class="dot" style="background:#d97706"></div> PageRank Evolution (5 eras)</div>
+    <div class="row"><div class="dot" style="background:#db2777"></div> Cross-link (same event)</div>
+    <div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);color:var(--muted);font-size:11px;">Click a node for details</div>
+  </div>
+  <input id="search" placeholder="Search: PageRank, BERT, RAG..." />
+</div>
+<aside id="panel">
+  <button class="close" aria-label="Close">&times;</button>
+  <div id="panel-body"></div>
+</aside>
+
+<script>
+// ---------- GUARD ----------
+if (typeof vis === "undefined" || !vis.Network) {
+  document.getElementById("network").innerHTML =
+    '<div style="padding:32px;color:#db2777;font-family:monospace;">' +
+    'vis-network failed to load. Check your internet connection.<br>' +
+    '(Once the file is loaded, the CDN is cached and works offline.)</div>';
+  throw new Error("vis-network not loaded");
+}
+
+// ---------- DATA ----------
+const IR = "ir", PR = "pr";
+
+const nodes = [
+  // Root
+  { id: "root", label: "Evolution of\nInformation Retrieval", level: 0, group: "root",
+    title: "Two parallel stories — the broad history of IR and the specific story of PageRank" },
+
+  // ===== IR BRANCH ROOT =====
+  { id: "ir_root", label: "IR Evolution\n(7 Eras)", level: 1, group: "ir_root" },
+
+  // IR Era 1: Pre-Web
+  { id: "ir_e1", label: "1. Pre-Web\n(1950s–1989)", level: 2, group: IR,
+    body: {
+      summary: "All foundations of modern IR were laid before the Web. Salton's SMART system, TF-IDF, vector space model — all in the 1960s-70s.",
+      points: [
+        "Hans Peter Luhn (IBM, 1950s) — automatic indexing",
+        "Gerard Salton (Cornell, 1960s) — SMART, Vector Space Model, TF-IDF",
+        "Karen Spärck Jones (1972) — formalized IDF",
+        "Cranfield experiments (1958-66) — birth of precision/recall",
+        "TREC (1992) — Cranfield methodology at web scale",
+        "DIALOG (1967), MEDLINE (1970) — closed, curated collections"
+      ],
+      keyIdea: "Boolean (yes/no) broke at scale → Ranked retrieval was born."
+    }
+  },
+  { id: "ir_e1_salton", label: "Salton & TF-IDF", level: 3, group: IR,
+    body: { summary: "SMART system at Cornell (1960s) — vector space model, TF-IDF, relevance feedback. Everything we still use today was born here.",
+            points: ["Vector space model — 1975 CACM paper", "TF-IDF: rare words are more informative (Spärck Jones 1972)", "BM25 — Robertson & Spärck Jones, from 1976 onward"],
+            keyIdea: "Word frequency + rarity instead of semantics — the foundation of statistical IR." } },
+  { id: "ir_e1_trec", label: "Cranfield & TREC", level: 3, group: IR,
+    body: { summary: "IR becoming a science. Cleverdon operationalized precision/recall, TREC scaled it to the web.",
+            points: ["Cranfield (1958-66) — controlled IR experiments", "Controversial finding: simple indexing beat manual classification", "TREC (NIST + DARPA, Nov 1992) — 1M documents, 25 groups", "CLEF (Europe), NTCIR (Asia) — still running today"],
+            keyIdea: "Unmeasured improvement isn't improvement. Evaluation infrastructure made IR an engineering discipline." } },
+
+  // IR Era 2: Web 1.0
+  { id: "ir_e2", label: "2. Web 1.0\n(1990–2004)", level: 2, group: IR,
+    body: {
+      summary: "The web exploded and old methods didn't scale. AltaVista, Yahoo, then Google. The spam war began.",
+      points: [
+        "Archie (1990) — first search engine, FTP filenames",
+        "WebCrawler (1994) — first full-text crawler",
+        "AltaVista (1995) — 16M documents, 300K queries on day one",
+        "Yahoo! Directory (1994) — manual curation, did not scale",
+        "Google (1998) — PageRank as an exogenous quality signal",
+        "AdWords (Oct 2000) — the money engine",
+        "Florida Update (Nov 16, 2003) — first major anti-spam strike"
+      ],
+      keyIdea: "Text-based ranking → spam infestation → link analysis (PageRank)."
+    } },
+  { id: "ir_e2_altavista", label: "AltaVista,\nYahoo, Excite", level: 3, group: IR,
+    body: { summary: "1994-96 crawler wave. WebCrawler indexed full text, AltaVista (DEC) showed 16M pages as a demo, Yahoo tried a manual directory.",
+            points: ["AltaVista — started as a DEC Alpha hardware demo", "Yahoo Directory — switched to Google in 2002, shut down 2014", "Excite, HotBot (Inktomi-powered), Lycos"],
+            keyIdea: "Manual curation (Yahoo) didn't scale. Automated full-text crawl won." } },
+  { id: "ir_e2_google", label: "Birth of\nGoogle (1998)", level: 3, group: IR,
+    body: { summary: "Page & Brin started BackRub at Stanford. PageRank — an exogenous quality signal. WWW7 paper Apr 1998, Google Inc. Sep 1998.",
+            points: ["BackRub consumed too much Stanford network bandwidth", "Patent filed Jan 9, 1998, owned by Stanford", "1999: perception that Google beat AltaVista", "2000: even Yahoo switched to Google as backend"],
+            keyIdea: "Measure page quality not from the page itself but from outside it." } },
+  { id: "ir_e2_florida", label: "Florida Update\n(Nov 16, 2003)", level: 3, group: IR,
+    body: { summary: "Google's first major punitive algorithm update. Link farms and keyword stuffing targeted.",
+            points: ["Hilltop-based detection + aggressive spam pattern matching", "Thousands of commercial sites dropped overnight", "Right at the start of holiday shopping — 'SEO industry crisis'", "Google's opacity policy started here"],
+            keyIdea: "When a single signal is gamed, the algorithm must become punitive." } },
+
+  // IR Era 3: Web 2.0
+  { id: "ir_e3", label: "3. Web 2.0\n(2004–2014)", level: 2, group: IR,
+    body: {
+      summary: "Users started producing content. Personalization, vertical search, mobile exploded.",
+      points: [
+        "Web 2.0 term — Tim O'Reilly, Oct 2004",
+        "Wikipedia, blogs, MySpace, Facebook, YouTube",
+        "Vertical search: Kayak, Yelp, IMDb, Amazon A9",
+        "Google Personalized Search — Jun 2005 (general)",
+        "Universal Search — May 2007 (end of '10 blue links')",
+        "iPhone — Jun 2007 (mobile queries differ: short, voice, location)",
+        "Facebook Graph Search (2013) — failed; lesson: users type keywords, not structured queries"
+      ],
+      keyIdea: "Static content → UGC explosion → personalization + vertical."
+    } },
+  { id: "ir_e3_personal", label: "Personalized\nSearch (2005)", level: 3, group: IR,
+    body: { summary: "Relevance became user-relative. Not 'best doc for Q' anymore but 'best doc for Q + U + context'.",
+            points: ["Beta: Mar 2004 → Jun 2005 general", "Personalized variant of PageRank as the substrate", "Compute problem: a separate vector for billions of users is infeasible"],
+            keyIdea: "IR's objective function changed — global → personal." } },
+  { id: "ir_e3_universal", label: "Universal Search\n+ Mobile", level: 3, group: IR,
+    body: { summary: "May 2007: images, video, news on one SERP. Jun 2007: iPhone — mobile queries changed IR's assumptions.",
+            points: ["The '10 blue links' era ended", "2015: more than half of queries came from mobile", "Mobile queries are short, voice, location-aware"],
+            keyIdea: "One modality (text) isn't enough — multi-modality + context-awareness needed." } },
+
+  // IR Era 4: Semantic Web
+  { id: "ir_e4", label: "4. Semantic Web\n(2001–)", level: 2, group: IR,
+    body: {
+      summary: "Tim Berners-Lee's vision: a web marked up for machines. The grand vision failed but the pragmatic slice (schema.org, Wikidata) survived.",
+      points: [
+        "TBL, Hendler, Lassila — Scientific American, May 2001",
+        "RDF (1999), OWL (2004), SPARQL (2008) — W3C stack",
+        "Opening vignette: agents coordinating a doctor's appointment (what we expect from ChatGPT today)",
+        "schema.org (Jun 2, 2011) — joint vocabulary by Bing+Google+Yahoo",
+        "DBpedia (2007), Wikidata (Oct 29, 2012)"
+      ],
+      keyIdea: "Goal was right (entity-centric), path was wrong (manual annotation). Once ML could extract meaning from unstructured text, hand-annotation became unnecessary."
+    } },
+  { id: "ir_e4_tbl", label: "TBL Vision\n(2001)", level: 3, group: IR,
+    body: { summary: "Meaningful content for machines → autonomous agents. RDF triples to make the web machine-readable.",
+            points: ["Scientific American article, May 2001", "Opening: two siblings using agents to coordinate their mother's medical appointment", "Exactly what we expect from ChatGPT in 2025 — designed in 2001"],
+            keyIdea: "Vision was 25 years ahead — the implementation path was wrong." } },
+  { id: "ir_e4_schema", label: "schema.org &\nWikidata", level: 3, group: IR,
+    body: { summary: "The pragmatic slice of the Semantic Web succeeded — because there was an incentive (SEO reward).",
+            points: ["schema.org (2011) — 297 classes → 800+ today", "Embedded in HTML via JSON-LD", "Wikidata (2012) — funded partly by Google, fuel for Knowledge Graph", "Linked Open Data — TBL's 5-star framework"],
+            keyIdea: "Standards live when there's an incentive; die when there isn't." } },
+
+  // IR Era 5: Knowledge Graph
+  { id: "ir_e5", label: "5. Knowledge\nGraph (2012–18)", level: 2, group: IR,
+    body: {
+      summary: "Things, not strings. Google KG turned search results into answers. Watson won Jeopardy.",
+      points: [
+        "Amit Singhal blog — May 16, 2012: 'things, not strings'",
+        "At launch: 500M entities, 3.5B properties/relations",
+        "Sources: Freebase (Google acquired in 2010), Wikipedia, CIA Factbook",
+        "Bing Satori (2013), Microsoft KG",
+        "Hummingbird (2013) — rewrite of the core ranking algorithm",
+        "RankBrain (Oct 2015) — Google's first openly admitted ML signal",
+        "IBM Watson Jeopardy! — Feb 14, 2011 (90 servers, 2880 cores)",
+        "Siri (2011), Alexa (2014) — entity-driven voice search"
+      ],
+      keyIdea: "Search results → answers. Queries now match entities, not just documents."
+    } },
+  { id: "ir_e5_kg", label: "Google KG\n(May 2012)", level: 3, group: IR,
+    body: { summary: "For 'Obama wife', Obama → spouse → Michelle Obama is now a direct answer. Featured snippets and knowledge panels come from here.",
+            points: ["500M entities, 3.5B relations at launch", "Freebase + Wikipedia + CIA World Factbook", "Bing Satori — parallel push, 2013"],
+            keyIdea: "Not a clicked link but a displayed answer." } },
+  { id: "ir_e5_ml", label: "Hummingbird +\nRankBrain", level: 3, group: IR,
+    body: { summary: "ML entered ranking. RankBrain was Google's first openly acknowledged ML signal — within a year it became the 3rd most important signal.",
+            points: ["Hummingbird (Aug/Sep 2013) — core ranking rewrite", "RankBrain (Oct 26, 2015) — initially for the unseen 15% of queries", "SEO panic: you can no longer reverse-engineer a learned signal"],
+            keyIdea: "Feature engineering → learned model. Reverse-engineering ends." } },
+
+  // IR Era 6: Neural IR
+  { id: "ir_e6", label: "6. Neural IR\n(2018–2022)", level: 2, group: IR,
+    body: {
+      summary: "Embeddings ate the index. BERT was a leap in search quality; dense retrieval finally beat BM25.",
+      points: [
+        "word2vec (Mikolov, Google, 2013) — king−man+woman≈queen",
+        "GloVe (Stanford, 2014)",
+        "Transformer (Vaswani et al., Jun 2017)",
+        "BERT (Oct 2018) → Google Search (Oct 25, 2019)",
+        "DPR (2020) — beat BM25 by 9-19 points",
+        "ColBERT (2020) — late interaction",
+        "SPLADE (2021) — learned sparse",
+        "CLIP (Jan 2021) — image + text in one space",
+        "MUM (May 2021) — 75 languages, 1000× BERT"
+      ],
+      keyIdea: "Meaning became a computable object for the first time. Hybrid (sparse+dense) is now standard."
+    } },
+  { id: "ir_e6_bert", label: "BERT in Search\n(Oct 25, 2019)", level: 3, group: IR,
+    body: { summary: "Pandu Nayak: 'biggest leap of the past 5 years'. Initially ~10% of English queries.",
+            points: ["'applying for US visa from a country with bad relations' → State Dept guide", "'can you get medicine for someone pharmacy' → 'for' now matters", "Synonym problem solved"],
+            keyIdea: "Keyword matching → intent understanding." } },
+  { id: "ir_e6_dense", label: "DPR / ColBERT\n/ SPLADE", level: 3, group: IR,
+    body: { summary: "Sparse retrieval was genuinely broken for the first time in 30 years. Dense embeddings + ANN indexes.",
+            points: ["DPR — Karpukhin (Facebook, 2020) — dual-encoder + FAISS", "ColBERT — Khattab & Zaharia (Stanford, 2020) — per-token vector", "SPLADE — Naver (2021) — sparse, fits inverted index", "Cross-encoder rerankers: monoBERT, monoT5"],
+            keyIdea: "Production default: hybrid (BM25 + dense), not pure dense." } },
+  { id: "ir_e6_vec", label: "Vector DBs +\nMultimodal", level: 3, group: IR,
+    body: { summary: "FAISS, HNSW as infrastructure. Pinecone, Weaviate, Milvus, Qdrant, Chroma as products. CLIP/MUM for multimodal.",
+            points: ["FAISS (Facebook, 2017) — billion-scale ANN", "HNSW (2018) — graph-based approximate nearest neighbor", "Vector DB sector: Pinecone, Weaviate, Qdrant", "CLIP (OpenAI, 2021) — 400M image-text pairs"],
+            keyIdea: "Cross-modal transitions became a natural part of retrieval." } },
+
+  // IR Era 7: LLM
+  { id: "ir_e7", label: "7. LLM Era\n(2022–)", level: 2, group: IR,
+    body: {
+      summary: "ChatGPT shock → search race. RAG as production standard. AI Overviews + Deep Research.",
+      points: [
+        "ChatGPT — Nov 30, 2022 (1M in 5 days, 100M MAU by Jan 2023)",
+        "Google 'code red' — Dec 2022",
+        "Bard (Feb 6, 2023), Bing Chat (Feb 7, 2023, GPT-4 powered)",
+        "Perplexity — answer engine + inline citations",
+        "Anthropic Claude (Mar 2023), Llama (Feb 2023)",
+        "RAG — Lewis et al. 2020, production standard from 2023+",
+        "Google AI Overviews — May 14, 2024 (US), 100+ countries",
+        "Deep Research — OpenAI (Feb 2025), Gemini (Dec 2024), Perplexity"
+      ],
+      keyIdea: "Search results → synthesized answer + citations. The 'Google Zero' debate begins."
+    } },
+  { id: "ir_e7_chatgpt", label: "ChatGPT Shock\n(Nov 30, 2022)", level: 3, group: IR,
+    body: { summary: "Fastest-growing consumer app in history. The race started within a week.",
+            points: ["1M users in 5 days, 100M MAU by January", "Google 'code red' — Dec 2022", "Bard (Feb 6), Bing Chat (Feb 7) — one day apart"],
+            keyIdea: "AI used to be considered un-productizable — that assumption collapsed on Nov 30, 2022." } },
+  { id: "ir_e7_rag", label: "RAG: Production\nStandard", level: 3, group: IR,
+    body: { summary: "ChatGPT couldn't browse the web at first — pure parametric. RAG was the answer: retrieval + generation.",
+            points: ["Lewis et al. (2020 NeurIPS) — Facebook + UCL + NYU", "Parametric LLM + non-parametric (Wikipedia + DPR)", "Academia named the pattern in 2020; products created the wave in 2023"],
+            keyIdea: "The only practical answer to hallucination + cutoff + private data." } },
+  { id: "ir_e7_overview", label: "AI Overviews +\nDeep Research", level: 3, group: IR,
+    body: { summary: "Generative search productized. ~60% of Google queries end with zero clicks.",
+            points: ["SGE (May 2023) → AI Overviews (May 14, 2024 US)", "OpenAI SearchGPT (Jul 2024) → ChatGPT Search (Oct 2024)", "Deep Research — 5-30 min web crawl producing analyst-grade reports", "RankGPT, RankZephyr — LLM-as-reranker"],
+            keyIdea: "'Google Zero' debate: is the publisher economy shifting?" } },
+
+  // ===== PAGERANK BRANCH ROOT =====
+  { id: "pr_root", label: "PageRank Evolution\n(5 Eras)", level: 1, group: "pr_root" },
+
+  // PR Era 1: Birth
+  { id: "pr_e1", label: "Era 1 · Birth\n(1996–1998)", level: 2, group: PR,
+    body: {
+      summary: "BackRub project at Stanford. Inspired by bibliometrics — the web as a citation graph.",
+      points: [
+        "Inspiration: Garfield's Citation Index (1955)",
+        "Pinski & Narin (1976) — weighted citation, recursive definition (PageRank's ancestor)",
+        "Page & Brin BackRub (1996) — Stanford",
+        "Random surfer + damping (0.85)",
+        "WWW7 paper — April 1998",
+        "Patent: filed Jan 9, 1998 (Stanford)",
+        "Google Inc. — Sep 4, 1998"
+      ],
+      keyIdea: "Measure page importance from outside the page — with a signal that's hard to manipulate."
+    } },
+  { id: "pr_e1_biblio", label: "Bibliometrics\n(1955-1976)", level: 3, group: PR,
+    body: { summary: "Academia had been measuring importance via citations for 40 years. Pinski-Narin established the idea of recursive weighting.",
+            points: ["Eugene Garfield (1955) — Citation Index, ancestor of Web of Science", "Naive counting isn't enough: a Nature cite is worth more than an unknown conference cite", "Pinski & Narin (1976) — the importance of a journal is recursively defined by the journals that cite it"],
+            keyIdea: "PageRank's mathematical skeleton existed in 1976 — it just needed to be applied to the web." } },
+  { id: "pr_e1_surfer", label: "Random Surfer\nModel", level: 3, group: PR,
+    body: { summary: "A random user clicks through links and with 15% probability jumps to a random page. Long-run probability of being on each page = PageRank.",
+            points: ["d = 0.85 damping factor (solves dead-end + spider trap)", "Dominant eigenvector of the web graph's stochastic matrix", "Convergence via power iteration", "Stanford 24M pages converged in a few hours on a normal PC"],
+            keyIdea: "Instead of complex spam detection — intuitive, scalable, hard to manipulate." } },
+  { id: "pr_e1_launch", label: "BackRub →\nGoogle Inc.", level: 3, group: PR,
+    body: { summary: "Academic prototype → product → company. Stanford owned the patent; Google licensed it.",
+            points: ["Stanford received 1.8M Google shares, sold for ~$336M in 2005", "WWW7 paper has 20K+ citations", "1999: recognized as better than AltaVista", "2000: even Yahoo used Google as its backend"],
+            keyIdea: "A record-setting university tech-transfer case." } },
+
+  // PR Era 2: Rivals
+  { id: "pr_e2", label: "Era 2 · Rivals\n(1998–2003)", level: 2, group: PR,
+    body: {
+      summary: "PageRank wasn't alone. HITS, SALSA, Hilltop were parallel discoveries. Hilltop got integrated into Google.",
+      points: [
+        "HITS — Kleinberg (Cornell, 1999) — Hub & Authority",
+        "SALSA — Lempel & Moran (2000) — HITS + random walk",
+        "Hilltop — Bharat & Mihaila (Toronto, 2001) — Expert + Authority",
+        "Google hired Bharat in 2003",
+        "Florida Update's algorithm was Hilltop-based"
+      ],
+      keyIdea: "Not the right algorithm wins — the scale-appropriate algorithm wins."
+    } },
+  { id: "pr_e2_hits", label: "HITS\n(Kleinberg 1999)", level: 3, group: PR,
+    body: { summary: "Two roles per page: Authority (source) and Hub (guide). Mutual recursion.",
+            points: ["Apple's home page = authority for iPhone", "'Top 10 phones' list = a good hub", "Query-dependent: must be recomputed per query", "Used by Teoma/Ask Jeeves — too slow in production"],
+            keyIdea: "Pretty algorithm + bad scale = loser." } },
+  { id: "pr_e2_hilltop", label: "Hilltop\n(2001)", level: 3, group: PR,
+    body: { summary: "Two layers — Expert page + Authority. Links from topic-specific experts are especially valuable.",
+            points: ["Krishna Bharat & George Mihaila — Toronto", "Google hired Bharat in 2003", "Bharat later founded Google News", "Florida Update was Hilltop-based"],
+            keyIdea: "Not all links are equal — the link from a topic-specific expert is special." } },
+
+  // PR Era 3: Spam War
+  { id: "pr_e3", label: "Era 3 · Spam\nWar (2002-05)", level: 2, group: PR,
+    body: {
+      summary: "PageRank manipulation became an industry. Topic-Sensitive PR, TrustRank, Florida hit back.",
+      points: [
+        "Link farms, reciprocal linking, comment spam, link sales",
+        "Topic-Sensitive PageRank — Haveliwala (2002)",
+        "TrustRank — Gyöngyi, Garcia-Molina, Pedersen (2004)",
+        "Florida Update — Nov 16, 2003",
+        "Bourbon (2005), Jagger (2005), Big Daddy (2006) followed"
+      ],
+      keyIdea: "PageRank's success made it a target. A single signal cannot survive under attack."
+    } },
+  { id: "pr_e3_topic", label: "Topic-Sensitive\nPR (2002)", level: 3, group: PR,
+    body: { summary: "Haveliwala (Stanford): a single global PR isn't enough — authorities vary by topic.",
+            points: ["16 DMOZ topics (Sports, Health, Science…)", "A separate PR vector for each topic", "Random surfer's jump target is topic-specific", "Spammer must now manipulate each topic separately", "Ancestor of modern Personalized PR"],
+            keyIdea: "ESPN might be a better authority for sports than NYT — evaluate by context." } },
+  { id: "pr_e3_trust", label: "TrustRank\n(2004)", level: 3, group: PR,
+    body: { summary: "Human editors pick a small trusted seed. Trust propagates along links, decays with distance.",
+            points: ["Gyöngyi, Garcia-Molina (Stanford) + Pedersen (Yahoo)", "VLDB 2004", "Integrated into Yahoo's search infrastructure", "Anti-TrustRank, Combined variants", "Ancestor of today's quality raters system"],
+            keyIdea: "Not pure automated ML — bolt human editorial onto the algorithm." } },
+  { id: "pr_e3_florida", label: "Florida Update\n(Nov 16, 2003)", level: 3, group: PR,
+    body: { summary: "Google's first major punitive algorithm change. Hilltop-based detection.",
+            points: ["Keyword stuffing, hidden text, artificial link patterns", "Thousands of sites dropped overnight", "Holiday shopping season — 'SEO industry crisis'", "Google's opacity policy started here"],
+            keyIdea: "Algorithmic defense can't be reactive — it must be proactive, and the details must be hidden." } },
+
+  // PR Era 4: Scale + Personalization
+  { id: "pr_e4", label: "Era 4 · Scale +\nPersonal (2003-10)", level: 2, group: PR,
+    body: {
+      summary: "Web went from 24M → 1T pages. Pure power iteration took days. Block structure, adaptive methods, extrapolation. Personalized PR.",
+      points: [
+        "BlockRank — Kamvar et al. (WWW2003) — 2× speedup",
+        "Adaptive PageRank + Quadratic Extrapolation",
+        "Three together: 3-5× speedup",
+        "Personalized PageRank — Topic-Sensitive PR + user",
+        "Hub Decomposition (Jeh & Widom 2003)",
+        "Monte Carlo PageRank (Fogaras et al. 2005)",
+        "Reasonable Surfer — Google patent, 2010 (Jeffrey Dean)"
+      ],
+      keyIdea: "Scale forces the math. Optimization = exploiting the web's structure."
+    } },
+  { id: "pr_e4_block", label: "BlockRank\n(2003)", level: 3, group: PR,
+    body: { summary: "The web is blocky — dense within stanford.edu, sparse across hosts. Exploit that structure.",
+            points: ["Kamvar, Haveliwala, Manning, Golub — Stanford", "First intra-host PR, then inter-host, then combine", "Use as initial state for full PR → 2× convergence", "With Adaptive PR + Quadratic Extrapolation: 3-5×"],
+            keyIdea: "General algorithm + domain knowledge = production speed." } },
+  { id: "pr_e4_personal", label: "Personalized PR", level: 3, group: PR,
+    body: { summary: "Random surfer's jump target adapted to the user's interests. Compute: infeasible to store a vector per billion users.",
+            points: ["Google Personalized Search beta (2004) → general 2005", "Hub Decomposition: log N hubs suffice", "Monte Carlo PR: sample random walks, average", "GraphRAG / HippoRAG (2024) use the same math for LLMs"],
+            keyIdea: "The same math returned 20 years later as HippoRAG in the LLM era." } },
+  { id: "pr_e4_reasonable", label: "Reasonable Surfer\n(2010)", level: 3, group: PR,
+    body: { summary: "The random surfer is naive — users don't click with equal probability. Links are weighted.",
+            points: ["Google patent — Jeffrey Dean (Senior Fellow)", "Position: header > footer", "Visual prominence: large + colored > small + gray", "Anchor text relevance, link context"],
+            keyIdea: "Placing 100 links in the footer doesn't work anymore — link building is about 'where, how, how visible'." } },
+
+  // PR Era 5: Black Box
+  { id: "pr_e5", label: "Era 5 · Black Box\n(2010–today)", level: 2, group: PR,
+    body: {
+      summary: "Penguin: ML penalty. Toolbar PR died. One of hundreds of signals. In 2024 PageRank returned via HippoRAG/GraphRAG.",
+      points: [
+        "rel='nofollow' (Jan 18, 2005) — against comment spam",
+        "PageRank Sculpting → killed by Matt Cutts announcement in 2009",
+        "Penguin (Apr 2012) — site-level penalty",
+        "Penguin 4.0 (2016) — real-time, core algorithm",
+        "Toolbar PR — shut down Mar 2016",
+        "Modern Google: E-E-A-T, Core Web Vitals, RankBrain, BERT, MUM",
+        "GraphRAG (Microsoft, Feb 2024)",
+        "HippoRAG (NeurIPS 2024) — Personalized PageRank + LLM memory"
+      ],
+      keyIdea: "PageRank didn't die — it sank deep into the black box. It returned in the LLM era."
+    } },
+  { id: "pr_e5_penguin", label: "Penguin\n(Apr 2012)", level: 3, group: PR,
+    body: { summary: "An ML-aided refinement of Florida. Paid links, over-optimized anchor text targeted.",
+            points: ["Site-level penalty — entire domain loses traffic", "Penguin 4.0 (2016) — real-time, integrated into core ranking", "PageRank is no longer a standalone ranking signal"],
+            keyIdea: "Penalties aren't a separate filter anymore — they're a natural part of ranking." } },
+  { id: "pr_e5_toolbar", label: "Public PR\nDeath (2016)", level: 3, group: PR,
+    body: { summary: "Toolbar PR (0-10 score, 2000-2016) became the SEO obsession. Shut down March 2016.",
+            points: ["2013: Google stopped updating the toolbar", "Mar 2016: completely shut down", "John Mueller: 'PR is still used internally, but the external value is stale'", "Moz DA, Ahrefs DR, Majestic TF/CF — proxy metrics"],
+            keyIdea: "PageRank sank deep into Google's black box." } },
+  { id: "pr_e5_modern", label: "Modern Google\n(2024-26)", level: 3, group: PR,
+    body: { summary: "Hundreds of ranking signals. PageRank is no longer the core signal but a prior + crawl budget + index inclusion.",
+            points: ["E-E-A-T, Core Web Vitals, freshness, personalization", "Knowledge Graph entity scores", "RankBrain (2015), BERT (2019), MUM (2021), Gemini-based models", "PR role: crawl budget + index inclusion + trust baseline"],
+            keyIdea: "PR is now the ground floor — a 25-story ML building was built on top." } },
+  { id: "pr_e5_graphrag", label: "GraphRAG &\nHippoRAG (2024)", level: 3, group: PR,
+    body: { summary: "PageRank returned in the LLM era. Knowledge graph + Personalized PR + LLM synthesis.",
+            points: ["GraphRAG (Microsoft, Feb 2024) — extract entity graph, traverse with PR-like methods", "HippoRAG (NeurIPS 2024) — Personalized PR + hippocampus analogy", "Multi-hop reasoning + citation generation", "1998's algorithm answers 2024's hallucination problem"],
+            keyIdea: "1998 PageRank solved web spam. 2024 PageRank is solving LLM hallucination — same algorithm, new problem." } },
+  { id: "pr_e5_legacy", label: "Academic Legacy", level: 3, group: PR,
+    body: { summary: "PageRank spread everywhere beyond the web.",
+            points: ["TwitterRank (2010) — influencer detection", "TrustRank — financial fraud detection", "Eigenfactor (2007) — journal impact score (replacing Impact Factor)", "GeneRank — biology, protein interaction networks", "NetworkX, igraph, Spark GraphX — pagerank() is a standard function"],
+            keyIdea: "In 28 years it went from an academic computation principle to an everyday tool." } },
+];
+
+// ---------- EDGES ----------
+const edges = [
+  // Root → branches
+  { from: "root", to: "ir_root" },
+  { from: "root", to: "pr_root" },
+
+  // IR branch
+  { from: "ir_root", to: "ir_e1" }, { from: "ir_root", to: "ir_e2" },
+  { from: "ir_root", to: "ir_e3" }, { from: "ir_root", to: "ir_e4" },
+  { from: "ir_root", to: "ir_e5" }, { from: "ir_root", to: "ir_e6" },
+  { from: "ir_root", to: "ir_e7" },
+
+  { from: "ir_e1", to: "ir_e1_salton" }, { from: "ir_e1", to: "ir_e1_trec" },
+  { from: "ir_e2", to: "ir_e2_altavista" }, { from: "ir_e2", to: "ir_e2_google" },
+  { from: "ir_e2", to: "ir_e2_florida" },
+  { from: "ir_e3", to: "ir_e3_personal" }, { from: "ir_e3", to: "ir_e3_universal" },
+  { from: "ir_e4", to: "ir_e4_tbl" }, { from: "ir_e4", to: "ir_e4_schema" },
+  { from: "ir_e5", to: "ir_e5_kg" }, { from: "ir_e5", to: "ir_e5_ml" },
+  { from: "ir_e6", to: "ir_e6_bert" }, { from: "ir_e6", to: "ir_e6_dense" },
+  { from: "ir_e6", to: "ir_e6_vec" },
+  { from: "ir_e7", to: "ir_e7_chatgpt" }, { from: "ir_e7", to: "ir_e7_rag" },
+  { from: "ir_e7", to: "ir_e7_overview" },
+
+  // PR branch
+  { from: "pr_root", to: "pr_e1" }, { from: "pr_root", to: "pr_e2" },
+  { from: "pr_root", to: "pr_e3" }, { from: "pr_root", to: "pr_e4" },
+  { from: "pr_root", to: "pr_e5" },
+
+  { from: "pr_e1", to: "pr_e1_biblio" }, { from: "pr_e1", to: "pr_e1_surfer" },
+  { from: "pr_e1", to: "pr_e1_launch" },
+  { from: "pr_e2", to: "pr_e2_hits" }, { from: "pr_e2", to: "pr_e2_hilltop" },
+  { from: "pr_e3", to: "pr_e3_topic" }, { from: "pr_e3", to: "pr_e3_trust" },
+  { from: "pr_e3", to: "pr_e3_florida" },
+  { from: "pr_e4", to: "pr_e4_block" }, { from: "pr_e4", to: "pr_e4_personal" },
+  { from: "pr_e4", to: "pr_e4_reasonable" },
+  { from: "pr_e5", to: "pr_e5_penguin" }, { from: "pr_e5", to: "pr_e5_toolbar" },
+  { from: "pr_e5", to: "pr_e5_modern" }, { from: "pr_e5", to: "pr_e5_graphrag" },
+  { from: "pr_e5", to: "pr_e5_legacy" },
+
+  // CROSS-LINKS (same event in both narratives)
+  { from: "ir_e2_google", to: "pr_e1_launch", dashes: true, group: "cross",
+    label: "Birth of Google" },
+  { from: "ir_e2_florida", to: "pr_e3_florida", dashes: true, group: "cross",
+    label: "Florida 2003" },
+  { from: "ir_e5_ml", to: "pr_e5_modern", dashes: true, group: "cross",
+    label: "ML ranking" },
+  { from: "ir_e7_rag", to: "pr_e5_graphrag", dashes: true, group: "cross",
+    label: "RAG ↔ GraphRAG" },
+  { from: "ir_e3_personal", to: "pr_e4_personal", dashes: true, group: "cross",
+    label: "Personalization" },
+];
+
+// ---------- VIS NETWORK ----------
+const groupStyles = {
+  root:     { color: { background: "#1f2937", border: "#111827" },
+              font: { size: 28, color: "#ffffff" }, shape: "box", borderWidth: 2 },
+  ir_root:  { color: { background: "#2563eb", border: "#1d4ed8" },
+              font: { size: 24, color: "#ffffff" }, shape: "box", borderWidth: 2 },
+  pr_root:  { color: { background: "#d97706", border: "#b45309" },
+              font: { size: 24, color: "#ffffff" }, shape: "box", borderWidth: 2 },
+  ir:       { color: { background: "#dbeafe", border: "#2563eb" },
+              font: { size: 20, color: "#1e3a8a" }, shape: "box", borderWidth: 1.5 },
+  pr:       { color: { background: "#fef3c7", border: "#d97706" },
+              font: { size: 20, color: "#78350f" }, shape: "box", borderWidth: 1.5 },
+};
+
+// Mirror the two branches around the central root:
+//   IR grows UPWARD (leaves at the top, eras above the IR root)
+//   Root sits in the middle
+//   PR grows DOWNWARD (eras below, leaves at the bottom)
+// With direction "UD", lower visLevel = higher on screen.
+function computeVisLevel(n) {
+  if (n.id === "root") return 3;
+  const isIR = n.id === "ir_root" || n.id.startsWith("ir_");
+  const isPR = n.id === "pr_root" || n.id.startsWith("pr_");
+  if (isIR) return 3 - n.level;    // ir_root → 2, era → 1, leaf → 0
+  if (isPR) return 3 + n.level;    // pr_root → 4, era → 5, leaf → 6
+  return n.level;
+}
+
+const visNodes = nodes.map(n => {
+  const level3 = (n.level === 3);
+  const base = groupStyles[n.group] || groupStyles.ir;
+  return {
+    id: n.id,
+    label: n.label,
+    level: computeVisLevel(n),
+    color: base.color,
+    font: { ...base.font, size: level3 ? 16 : base.font.size, multi: true },
+    shape: base.shape,
+    borderWidth: base.borderWidth,
+    margin: 16,
+    widthConstraint: { minimum: level3 ? 140 : 180, maximum: 240 },
+    title: n.title || (n.body ? n.body.summary : undefined),
+    _body: n.body,
+    _group: n.group,
+  };
+});
+
+const visEdges = edges.map(e => ({
+  from: e.from, to: e.to,
+  dashes: !!e.dashes,
+  color: e.group === "cross" ? { color: "#db2777", opacity: 0.8 }
+                              : { color: "#9ca3af", opacity: 0.7 },
+  width: e.group === "cross" ? 2 : 1,
+  label: e.label,
+  font: { color: "#db2777", size: 11, strokeWidth: 0, background: "rgba(255,255,255,.85)" },
+  smooth: { type: "cubicBezier" },
+  arrows: { to: { enabled: false } },
+}));
+
+const container = document.getElementById("network");
+const data = { nodes: new vis.DataSet(visNodes), edges: new vis.DataSet(visEdges) };
+
+const options = {
+  layout: {
+    hierarchical: {
+      enabled: true,
+      direction: "UD",
+      sortMethod: "hubsize",
+      shakeTowards: "roots",
+      levelSeparation: 220,
+      nodeSpacing: 160,
+      treeSpacing: 260,
+      blockShifting: true,
+      edgeMinimization: true,
+      parentCentralization: true,
+    },
+  },
+  autoResize: true,
+  physics: { enabled: false },
+  interaction: { hover: true, tooltipDelay: 200, navigationButtons: false, keyboard: false },
+  edges: { selectionWidth: 2 },
+};
+
+const network = new vis.Network(container, data, options);
+
+// ---------- PANEL ----------
+const panel = document.getElementById("panel");
+const panelBody = document.getElementById("panel-body");
+const closeBtn = panel.querySelector(".close");
+
+function hidePanel() { panel.classList.remove("visible"); }
+function showPanel() { panel.classList.add("visible"); }
+closeBtn.addEventListener("click", hidePanel);
+
+function renderNode(n) {
+  if (!n) return;
+  const era = n._group === "ir" ? '<span class="era-tag ir">IR EVOLUTION</span>'
+            : n._group === "pr" ? '<span class="era-tag pr">PAGERANK EVOLUTION</span>'
+            : '<span class="era-tag">ROADMAP</span>';
+  const body = n._body;
+  let html = era + `<h2>${n.label.replace(/\n/g, " ")}</h2>`;
+  if (body) {
+    html += `<p>${body.summary}</p>`;
+    if (body.points && body.points.length) {
+      html += "<ul>" + body.points.map(p => `<li>${p}</li>`).join("") + "</ul>";
+    }
+    if (body.keyIdea) {
+      html += `<p><strong>Key idea:</strong> ${body.keyIdea}</p>`;
+    }
+  } else {
+    html += `<p>${n.title || "This is a category header — click its sub-nodes."}</p>`;
+  }
+  panelBody.innerHTML = html;
+  showPanel();
+}
+
+network.on("selectNode", (e) => {
+  const n = data.nodes.get(e.nodes[0]);
+  renderNode(n);
+});
+network.on("doubleClick", (e) => {
+  if (e.nodes[0]) network.focus(e.nodes[0], { scale: 1.2, animation: { duration: 600 } });
+});
+network.on("deselectNode", hidePanel);
+network.on("click", (params) => {
+  if (params.nodes.length === 0) hidePanel();
+});
+
+// ---------- SEARCH ----------
+const searchBox = document.getElementById("search");
+searchBox.addEventListener("input", (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) return;
+  const match = visNodes.find(n =>
+    n.label.toLowerCase().includes(q) ||
+    (n._body && n._body.summary && n._body.summary.toLowerCase().includes(q))
+  );
+  if (match) {
+    network.selectNodes([match.id]);
+    network.focus(match.id, { scale: 1.1, animation: { duration: 500 } });
+    renderNode(data.nodes.get(match.id));
+  }
+});
+searchBox.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.target.value = ""; }
+});
+
+// Initial layout — fit, but enforce a minimum scale so labels stay readable,
+// and bias view towards the top so the graph fills the canvas vertically.
+function layoutView(animate = false) {
+  network.fit({ animation: false });
+  const minScale = 0.55;
+  const currentScale = network.getScale();
+  const scale = Math.max(currentScale, minScale);
+
+  const positions = network.getPositions();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  Object.values(positions).forEach(p => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  });
+  const centerX = (minX + maxX) / 2;
+  // y so that the top of the graph sits ~80px below the top of the viewport
+  const viewportTopInGraph = minY - (80 / scale);
+  const targetY = viewportTopInGraph + (window.innerHeight / 2) / scale;
+
+  network.moveTo({
+    position: { x: centerX, y: targetY },
+    scale,
+    animation: animate ? { duration: 300 } : false
+  });
+}
+
+network.once("afterDrawing", () => layoutView(false));
+window.addEventListener("resize", () => layoutView(true));
+</script>
+</body>
+</html>

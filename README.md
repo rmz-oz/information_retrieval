@@ -21,6 +21,7 @@ Interactive course notes and quiz system. All content is in English.
 | 11 | Text Classification, Naive Bayes & LSI | Ready · 15 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch11.html) |
 | 21 | Link Analysis | Ready · 20 MC · 5 Classic | [Open →](https://rmz-oz.github.io/information_retrieval/ch21.html) |
 | 21+ | Link Analysis — Visual Companion | Infographic · 17 slides | [Open →](https://rmz-oz.github.io/information_retrieval/ch21-infographic.html) |
+| ★ | IR & PageRank Evolution — Mind Map | Interactive mirrored graph · 60+ nodes · 5 cross-links | [Open →](https://rmz-oz.github.io/information_retrieval/evolution-mindmap.html) |
 
 ## Topics Covered
 
